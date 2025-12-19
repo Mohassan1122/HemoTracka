@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
+use App\Notifications\DeliveryStatusNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -77,6 +79,11 @@ class DeliveryController extends Controller
             'message' => 'Rider assigned successfully',
             'delivery' => $delivery->fresh()->load('rider.user'),
         ]);
+
+        // Notify Rider
+        if ($delivery->rider && $delivery->rider->user) {
+            $delivery->rider->user->notify(new DeliveryStatusNotification($delivery, 'Assigned'));
+        }
     }
 
     /**
@@ -105,6 +112,11 @@ class DeliveryController extends Controller
             'message' => 'Delivery marked as picked up',
             'delivery' => $delivery->fresh(),
         ]);
+
+        // Notify Organization
+        if ($delivery->bloodRequest && $delivery->bloodRequest->organization) {
+            Notification::send($delivery->bloodRequest->organization->users, new DeliveryStatusNotification($delivery, 'Picked Up'));
+        }
     }
 
     /**
@@ -124,6 +136,11 @@ class DeliveryController extends Controller
             'message' => 'Delivery marked as in transit',
             'delivery' => $delivery->fresh(),
         ]);
+
+        // Notify Organization
+        if ($delivery->bloodRequest && $delivery->bloodRequest->organization) {
+            Notification::send($delivery->bloodRequest->organization->users, new DeliveryStatusNotification($delivery, 'In Transit'));
+        }
     }
 
     /**
@@ -146,6 +163,11 @@ class DeliveryController extends Controller
             'message' => 'Delivery completed successfully',
             'delivery' => $delivery->fresh(),
         ]);
+
+        // Notify Organization
+        if ($delivery->bloodRequest && $delivery->bloodRequest->organization) {
+            Notification::send($delivery->bloodRequest->organization->users, new DeliveryStatusNotification($delivery, 'Delivered'));
+        }
     }
 
     /**

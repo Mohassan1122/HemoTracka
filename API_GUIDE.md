@@ -1,170 +1,70 @@
 # HemoTracka API Integration Guide (V3)
 
-This guide is designed for frontend developers (Web & Mobile) to integrate with the HemoTracka backend. All requests should be sent to `http://localhost:8000/api`.
+This guide details the available API endpoints for the HemoTracka system, designed for Frontend (Web & Mobile) integration.
+
+**Base URL**: `http://localhost:8000/api`
+**Authentication**: Bearer Token required for most endpoints.
+**Headers**:
+- `Accept: application/json`
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 ---
 
-## 🔑 Global Configuration
+## 1. Authentication
+| Method | Endpoint | Description | Payload |
+|---|---|---|---|
+| POST | `/auth/register` | Register new user | `{first_name, last_name, email, password, phone, role}` |
+| POST | `/auth/login` | Login | `{email, password}` |
+| POST | `/auth/logout` | Logout | - |
+| GET | `/auth/profile` | Get current user | - |
+| PUT | `/auth/profile` | Update profile | `{first_name, last_name, phone, ...}` |
+| POST | `/auth/change-password` | Change password | `{current_password, password, password_confirmation}` |
+| POST | `/auth/forgot-password` | Request reset link | `{email}` |
+| POST | `/auth/reset-password` | Reset password | `{email, token, password}` |
 
-### Base URL
-`http://localhost:8000/api`
+## 2. Blood Requests (Facility/Hospital)
+| Method | Endpoint | Description | Payload |
+|---|---|---|---|
+| POST | `/facilities/blood-requests` | Create Request | `{blood_group, units_needed, urgency_level, needed_by, ...}` |
+| GET | `/facilities/request-history` | List Requests | - |
+| POST | `/facilities/blood-requests/{id}/cancel` | Cancel Request | - |
+| GET | `/facilities/blood-requests/{id}/offers` | View Offers | - |
+| POST | `/facilities/offers/{id}/accept` | Accept Offer | - |
 
-### Authentication
-Most endpoints require a `Bearer` token.
-- **Header**: `Authorization: Bearer {token}`
-- **Accept Header**: `Accept: application/json`
+## 3. Blood Bank Operations
+| Method | Endpoint | Description | Payload |
+|---|---|---|---|
+| GET | `/blood-bank/inventory` | View Inventory | - |
+| POST | `/blood-bank/inventory/{id}/adjust-stock` | Update Stock | `{adjustment, reason}` |
+| GET | `/blood-bank/requests` | View Incoming Requests | - |
+| POST | `/blood-bank/blood-requests/{id}/submit-offer` | Submit Offer | `{product_fee, shipping_fee, notes}` |
+| POST | `/blood-bank/requests/{id}/confirm-delivery` | Confirm Delivery Handover | - |
 
-### Standard Response Format
-```json
-{
-    "success": true,
-    "message": "Optional message",
-    "data": { ... }
-}
-```
+## 4. Delivery & Logistics (Rider)
+| Method | Endpoint | Description | Payload |
+|---|---|---|---|
+| GET | `/rider/deliveries` | Pending/Active Deliveries | - |
+| POST | `/rider/deliveries/{id}/pick-up` | Mark Picked Up | - |
+| POST | `/rider/deliveries/{id}/in-transit` | Mark In Transit | - |
+| POST | `/rider/deliveries/{id}/complete` | Mark Delivered | - |
+| POST | `/rider/update-location` | Update GPS | `{latitude, longitude}` |
 
----
+## 5. Global/Shared
+| Method | Endpoint | Description | Payload |
+|---|---|---|---|
+| GET | `/deliveries/track/{code}` | Public Tracking | - |
+| GET | `/notifications` | List Notifications | - |
+| POST | `/notifications/{id}/mark-read` | Mark Notification Read | - |
+| GET | `/messages/inbox` | List Messages | - |
 
-## 🚀 1. Authentication & User Profile
-
-### [POST] /auth/register
-Register a new user (Donor or Staff).
-- **Body**:
-  ```json
-  {
-      "first_name": "John",
-      "last_name": "Doe",
-      "email": "john@example.com",
-      "password": "password123",
-      "password_confirmation": "password123",
-      "role": "donor", // donor, rider, facilities, blood_banks
-      "phone": "08012345678"
-  }
-  ```
-
-### [POST] /auth/login
-Get API Token.
-- **Body**: `{"email": "...", "password": "..."}`
-- **Response**: `{ "token": "...", "user": { ... } }`
-
-### [GET] /auth/profile
-Get details of the currently authenticated user.
-
----
-
-## 📱 2. Mobile Dashboard & Activity
-
-### [GET] /activity-feed
-Consolidated feed for the "Today's Activity" section on mobile.
-- **Purpose**: Returns a mixed list of recent Donations, Requests, and Deliveries.
-- **Response**:
-  ```json
-  "data": [
-      {
-          "type": "Donation",
-          "title": "New Donation from John Doe",
-          "subtitle": "A+ - 2 units",
-          "time": "5 minutes ago",
-          "timestamp": "2025-12-18T..."
-      }
-  ]
-  ```
-
-### [GET] /donor/dashboard
-Specific stats for blood donors.
-- **Data**: Total units, badge progress, next eligible date.
-- **Includes**: `quick_actions` array for mobile button navigation.
-
----
-
-## 💉 3. Multi-Offer Blood Request System
-
-### [POST] /facilities/blood-requests
-Create a request for blood (Hospital side).
-- **Body**:
-  ```json
-  {
-      "blood_group": "B+",
-      "units_needed": 5,
-      "urgency_level": "Urgent",
-      "patient_name": "Alice Smith",
-      "hospital_unit": "ICU"
-  }
-  ```
-
-### [GET] /facilities/blood-requests/{id}/offers
-**[New]** List all competitive offers received for this request.
-- **Response**: List of offers from different blood banks with their respective fees.
-
-### [POST] /blood-bank/blood-requests/{id}/submit-offer
-**[New]** Submit an offer (Blood Bank side).
-- **Body**:
-  ```json
-  {
-      "product_fee": 5000,
-      "shipping_fee": 1500,
-      "card_charge": 200,
-      "notes": "Premium refrigerated handling"
-  }
-  ```
-
-### [POST] /facilities/offers/{offer}/accept
-**[New]** Hospital accepts a specific bid.
-- **Action**: Marks the offer as 'Accepted', rejects others, and initiates the **Delivery Rider** assignment.
-
----
-
-## 💳 4. Payments & Subscriptions
-
-### [POST] /facilities/payments/process
-Simulate a payment for a blood request.
-- **Body**:
-  ```json
-  {
-      "blood_request_id": 10,
-      "amount": 6700,
-      "payment_method": "Card", // Card, Bank Transfer, POD
-      "card_details": { "number": "4242...", "cvv": "123" }
-  }
-  ```
-
-### [POST] /subscriptions/subscribe
-Upgrade to a premium plan.
-- **Body**: `{"plan_id": 1}`
-- **Plans**: 1: Basic (Free), 2: Premium (Hospital), 3: Pharmacy Pro.
-
----
-
-## 📦 5. Logistics & Tracking
-
-### [GET] /deliveries/track/{code}
-Public endpoint to track shipment status.
-- **Response**: Includes the `status_history` timeline (Order Taken -> Picked Up -> In Transit).
-
-### [POST] /facilities/deliveries/{id}/confirm-receipt
-**[New]** Final confirmation by the Hospital that the blood has arrived safely.
-
----
-
-## 💬 6. Mobile Messaging (Chat)
-
-### [GET] /mobile/messages/conversations
-List all active chat threads.
-- **Data**: Shows other user's name, role, and the last message snippet.
-
-### [GET] /mobile/messages/chat/{otherUserId}
-Get full history of messages with a specific person.
-
----
-
-## 📊 7. Inventory (Mobile Grid)
-
-### [GET] /blood-bank/inventory
-Returns inventory categorized for the mobile grid view.
-- **Groups**: A+, A-, B+, B-, AB+, AB-, O+, O-.
-- **Status**: 'High', 'Low', or 'Out of Stock'.
-
----
+## 6. Admin
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/admin/dashboard` | Platform Overview |
+| GET | `/admin/organizations` | Manage Organizations |
+| GET | `/admin/users` | Manage Users |
+| GET | `/admin/stats/*` | Analytics endpoints |
 
 > [!NOTE]
-> All timestamps are in ISO 8601 format. For binary data (logos, photos), use `multipart/form-data`.
+> Detailed error messages are returned in `{"message": "..."}` format with 4xx/5xx status codes.

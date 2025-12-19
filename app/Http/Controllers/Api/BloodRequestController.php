@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BloodRequest;
 use App\Models\Delivery;
+use App\Models\User;
+use App\Notifications\NewBloodRequestNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -56,6 +59,12 @@ class BloodRequestController extends Controller
         ]);
 
         $bloodRequest = BloodRequest::create($validated);
+
+        // Notify Blood Banks and Admins
+        $usersToNotify = User::whereIn('role', ['blood_bank', 'admin'])->get();
+        if ($usersToNotify->count() > 0) {
+            Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
+        }
 
         return response()->json([
             'message' => 'Blood request created successfully',
