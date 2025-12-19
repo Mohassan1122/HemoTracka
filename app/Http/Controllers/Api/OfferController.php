@@ -1,0 +1,146 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Offer;
+use App\Models\BloodRequest;
+use App\Models\Delivery;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+
+class OfferController extends Controller
+{
+    /**
+     * List offers for a specific blood request.
+     */
+    public function index(BloodRequest $bloodRequest): JsonResponse
+    {
+        $offers = $bloodRequest->offers()
+            ->with('organization')
+            ->orderBy('total_amount', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $offers
+        ]);
+    }
+
+    /**
+     * Blood Bank submits an offer for a blood request.
+     */
+    public function store(Request $request, BloodRequest $bloodRequest): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->isBloodBank()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'product_fee' => 'required|numeric|min:0',
+            'shipping_fee' => 'required|numeric|min:0',
+            'card_charge' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string',
+        ]);
+
+        $productFee = $request->product_fee;
+        $shippingFee = $request->shipping_fee;
+        $cardCharge = $request->card_charge ?? 0;
+        $totalAmount = $productFee + $shippingFee + $cardCharge;
+
+        $offer = Offer::create([
+            'blood_request_id' => $bloodRequest->id,
+            'organization_id' => $user->organization_id,
+            'product_fee' => $productFee,
+            'shipping_fee' => $shippingFee,
+            'card_charge' => $cardCharge,
+            'total_amount' => $totalAmount,
+            'status' => 'Pending',
+            'notes' => $request->notes,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Offer submitted successfully',
+            'data' => $offer
+        ], 201);
+    }
+
+    /**
+     * Hospital accepts an offer.
+     */
+    public function accept(Offer $offer): JsonResponse
+    {
+        $user = Auth::user();
+        $bloodRequest = $offer->bloodRequest;
+
+        // Verify that the user belongs to the organization that made the request
+        if ($user->organization_id !== $bloodRequest->organization_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if ($offer->status !== 'Pending') {
+            return response()->json(['success' => false, 'message' => 'This offer cannot be accepted'], 400);
+        }
+
+        // 1. Mark offer as accepted
+        $offer->update(['status' => 'Accepted']);
+
+        // 2. Mark other pending offers for this request as rejected
+        $bloodRequest->offers()
+            ->where('id', '!=', $offer->id)
+            ->where('status', 'Pending')
+            ->update(['status' => 'Rejected']);
+
+        // 3. Update Blood Request status and financial details
+        $bloodRequest->update([
+            'status' => 'Processing',
+            'product_fee' => $offer->product_fee,
+            'shipping_fee' => $offer->shipping_fee,
+            'card_charge' => $offer->card_charge,
+            'total_amount' => $offer->total_amount,
+        ]);
+
+        // 4. Create Delivery record (Triggering the delivery flow)
+        $delivery = Delivery::create([
+            'blood_request_id' => $bloodRequest->id,
+            'pickup_location' => $offer->organization->address,
+            'dropoff_location' => $bloodRequest->organization->address,
+            'status' => 'Pending',
+            'status_history' => [
+                ['status' => 'Order Taken', 'time' => now()->toISOString()],
+                ['status' => 'Preparing for Dispatch', 'time' => now()->addMinutes(5)->toISOString()],
+            ],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Offer accepted and delivery initiated',
+            'data' => [
+                'offer' => $offer,
+                'delivery' => $delivery
+            ]
+        ]);
+    }
+
+    /**
+     * Hospital rejects an offer.
+     */
+    public function reject(Offer $offer): JsonResponse
+    {
+        $user = Auth::user();
+        if ($user->organization_id !== $offer->bloodRequest->organization_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $offer->update(['status' => 'Rejected']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Offer rejected'
+        ]);
+    }
+}

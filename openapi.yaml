@@ -1,0 +1,756 @@
+openapi: 3.0.3
+info:
+  title: HemoTracka API
+  description: |
+    Blood Bank Management System API for managing blood donations, inventory, requests, and deliveries.
+    
+    ## Authentication
+    All protected endpoints require Bearer token authentication. Use `/auth/login` to obtain a token.
+  version: 1.0.0
+  contact:
+    email: api@hemotracka.com
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User registration, login, logout, profile
+  - name: Organizations
+    description: Blood banks, hospitals, regulatory bodies
+  - name: Donors
+    description: Blood donor management
+  - name: Donations
+    description: Blood donation records
+  - name: Inventory
+    description: Blood inventory management
+  - name: Blood Requests
+    description: Blood request workflow
+  - name: Deliveries
+    description: Delivery tracking and management
+  - name: Riders
+    description: Delivery rider management
+  - name: Messages
+    description: Internal messaging
+  - name: Notifications
+    description: System notifications
+  - name: Feedback
+    description: Ratings and reviews
+  - name: Stats
+    description: Dashboard statistics
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+          nullable: true
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff, donor, rider, regulator]
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [Male, Female, Other]
+        created_at:
+          type: string
+          format: date-time
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Hospital, Blood Bank, Regulatory Body, Logistics]
+        license_number:
+          type: string
+        address:
+          type: string
+        contact_email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Active, Suspended]
+
+    Donor:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        blood_group:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        genotype:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [Eligible, Permanently Deferral, Temporary Deferral]
+
+    Donation:
+      type: object
+      properties:
+        id:
+          type: integer
+        donor_id:
+          type: integer
+        organization_id:
+          type: integer
+        blood_group:
+          type: string
+        units:
+          type: integer
+        donation_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [Pending, Screened, Stored, Discarded, Used]
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        blood_group:
+          type: string
+        type:
+          type: string
+          enum: [Whole Blood, RBC, PLT, FFP, Cryo]
+        units_in_stock:
+          type: integer
+        threshold:
+          type: integer
+        location:
+          type: string
+        expiry_date:
+          type: string
+          format: date
+
+    BloodRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        organization_id:
+          type: integer
+        blood_group:
+          type: string
+        units_needed:
+          type: integer
+        type:
+          type: string
+          enum: [Emergent, Bulk, Routine]
+        urgency_level:
+          type: string
+          enum: [Critical, High, Normal]
+        needed_by:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Pending, Approved, Sourcing, In Transit, Completed, Cancelled]
+
+    Delivery:
+      type: object
+      properties:
+        id:
+          type: integer
+        blood_request_id:
+          type: integer
+        rider_id:
+          type: integer
+        pickup_location:
+          type: string
+        dropoff_location:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Assigned, Picked Up, In Transit, Delivered, Returned, Failed]
+        tracking_code:
+          type: string
+
+    Rider:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        vehicle_type:
+          type: string
+          enum: [Bike, Car, Van, Drone]
+        vehicle_plate:
+          type: string
+        status:
+          type: string
+          enum: [Available, Busy, Offline]
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, last_name, email, phone, password, password_confirmation]
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                password_confirmation:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+        '422':
+          description: Validation error
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                  token_type:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /auth/profile:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+    put:
+      tags: [Authentication]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+
+  /organizations:
+    get:
+      tags: [Organizations]
+      summary: List all organizations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of organizations
+    post:
+      tags: [Organizations]
+      summary: Create organization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organization'
+      responses:
+        '201':
+          description: Organization created
+
+  /organizations/{id}:
+    get:
+      tags: [Organizations]
+      summary: Get organization by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Organization details
+    put:
+      tags: [Organizations]
+      summary: Update organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Organization updated
+    delete:
+      tags: [Organizations]
+      summary: Delete organization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Organization deleted
+
+  /donors:
+    get:
+      tags: [Donors]
+      summary: List all donors
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of donors
+    post:
+      tags: [Donors]
+      summary: Create donor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Donor'
+      responses:
+        '201':
+          description: Donor created
+
+  /donors/{id}:
+    get:
+      tags: [Donors]
+      summary: Get donor by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Donor details
+
+  /donors/{id}/donations:
+    get:
+      tags: [Donors]
+      summary: Get donor's donation history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of donations
+
+  /donations:
+    get:
+      tags: [Donations]
+      summary: List all donations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of donations
+    post:
+      tags: [Donations]
+      summary: Record a donation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Donation'
+      responses:
+        '201':
+          description: Donation recorded
+
+  /inventory:
+    get:
+      tags: [Inventory]
+      summary: List inventory items
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: blood_group
+          in: query
+          schema:
+            type: string
+        - name: low_stock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of inventory items
+    post:
+      tags: [Inventory]
+      summary: Create inventory item
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Item created
+
+  /inventory/summary:
+    get:
+      tags: [Inventory]
+      summary: Get inventory summary by blood group
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Inventory summary
+
+  /inventory/{id}/adjust-stock:
+    post:
+      tags: [Inventory]
+      summary: Adjust stock levels
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adjustment:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Stock adjusted
+
+  /blood-requests:
+    get:
+      tags: [Blood Requests]
+      summary: List blood requests
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of requests
+    post:
+      tags: [Blood Requests]
+      summary: Create blood request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BloodRequest'
+      responses:
+        '201':
+          description: Request created
+
+  /blood-requests/{id}/approve:
+    post:
+      tags: [Blood Requests]
+      summary: Approve blood request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pickup_location:
+                  type: string
+                dropoff_location:
+                  type: string
+      responses:
+        '200':
+          description: Request approved
+
+  /blood-requests/{id}/cancel:
+    post:
+      tags: [Blood Requests]
+      summary: Cancel blood request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Request cancelled
+
+  /deliveries:
+    get:
+      tags: [Deliveries]
+      summary: List deliveries
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of deliveries
+
+  /deliveries/track/{trackingCode}:
+    get:
+      tags: [Deliveries]
+      summary: Track delivery by code (public)
+      parameters:
+        - name: trackingCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delivery details
+        '404':
+          description: Not found
+
+  /deliveries/{id}/assign-rider:
+    post:
+      tags: [Deliveries]
+      summary: Assign rider to delivery
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rider_id:
+                  type: integer
+      responses:
+        '200':
+          description: Rider assigned
+
+  /deliveries/{id}/complete:
+    post:
+      tags: [Deliveries]
+      summary: Mark delivery as complete
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delivery completed
+
+  /riders:
+    get:
+      tags: [Riders]
+      summary: List riders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of riders
+
+  /riders/available:
+    get:
+      tags: [Riders]
+      summary: Get available riders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Available riders
+
+  /stats/dashboard:
+    get:
+      tags: [Stats]
+      summary: Get dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard stats
+
+  /stats/inventory-by-blood-group:
+    get:
+      tags: [Stats]
+      summary: Get inventory by blood group
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Inventory stats
+
+  /stats/donations-by-blood-group:
+    get:
+      tags: [Stats]
+      summary: Get donations by blood group
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Donation stats
+
+  /stats/low-stock-alerts:
+    get:
+      tags: [Stats]
+      summary: Get low stock alerts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Low stock items
