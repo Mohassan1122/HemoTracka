@@ -16,9 +16,20 @@ use Illuminate\Support\Facades\Mail;
 class AuthController extends Controller
 {
     /**
-     * Register a new user.
+     * Register a new user or organization.
      */
     public function register(Request $request): JsonResponse
+    {
+        $role = $request->input('role', 'donor');
+
+        if (in_array($role, ['facilities', 'blood_banks'])) {
+            return $this->registerOrganization($request);
+        }
+
+        return $this->registerUser($request);
+    }
+
+    private function registerUser(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
@@ -28,8 +39,7 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'in:Male,Female,Other'],
-            'organization_id' => ['nullable', 'exists:organizations,id'],
-            'role' => ['nullable', 'in:admin,donor,rider,facilities,blood_banks'],
+            'role' => ['nullable', 'in:admin,donor,rider'],
         ]);
 
         $user = User::create([
@@ -40,7 +50,6 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'date_of_birth' => $validated['date_of_birth'] ?? null,
             'gender' => $validated['gender'] ?? null,
-            'organization_id' => $validated['organization_id'] ?? null,
             'role' => $validated['role'] ?? 'donor',
         ]);
 
@@ -49,15 +58,50 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Registration successful. Please verify your email.',
+            'message' => 'Registration successful.',
             'user' => $user,
             'token' => $token,
             'token_type' => 'Bearer',
         ], 201);
     }
 
+    private function registerOrganization(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'license_number' => ['required', 'string', 'max:100', 'unique:organizations'],
+            'address' => ['required', 'string'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:organizations'], // Org email now used for auth
+            'phone' => ['required', 'string', 'max:20'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'type' => ['required', 'in:Hospital,Blood Bank'],
+        ]);
+
+        // Map role to type strictly if needed, or trust input type
+        $organization = \App\Models\Organization::create([
+            'name' => $validated['name'],
+            'license_number' => $validated['license_number'],
+            'address' => $validated['address'],
+            'email' => $validated['email'],
+            'contact_email' => $validated['email'], // Sync contact email
+            'phone' => $validated['phone'],
+            'password' => Hash::make($validated['password']),
+            'type' => $validated['type'],
+            'status' => 'Pending',
+        ]);
+
+        $token = $organization->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Organization registration successful.',
+            'user' => $organization, // Frontend expects 'user' key often
+            'token' => $token,
+            'token_type' => 'Bearer',
+        ], 201);
+    }
+
     /**
-     * Login user and create token.
+     * Login user/organization and create token.
      */
     public function login(Request $request): JsonResponse
     {
@@ -66,21 +110,34 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (!Auth::attempt($validated)) {
+        // 1. Try finding User
+        $user = User::where('email', $validated['email'])->first();
+        if ($user && Hash::check($validated['password'], $user->password)) {
+            $token = $user->createToken('auth_token')->plainTextToken;
             return response()->json([
-                'message' => 'Invalid credentials',
-            ], 401);
+                'message' => 'Login successful',
+                'user' => $user->load('organization'),
+                'token' => $token,
+                'token_type' => 'Bearer',
+            ]);
         }
 
-        $user = User::where('email', $validated['email'])->firstOrFail();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // 2. Try finding Organization
+        $org = \App\Models\Organization::where('email', $validated['email'])->first();
+        if ($org && Hash::check($validated['password'], $org->password)) {
+            $token = $org->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'message' => 'Login successful',
+                'user' => $org,
+                'role' => $org->type === 'Hospital' ? 'facilities' : 'blood_banks', // Helper for frontend
+                'token' => $token,
+                'token_type' => 'Bearer',
+            ]);
+        }
 
         return response()->json([
-            'message' => 'Login successful',
-            'user' => $user->load('organization'),
-            'token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+            'message' => 'Invalid credentials',
+        ], 401);
     }
 
     /**

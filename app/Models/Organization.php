@@ -6,10 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
-class Organization extends Model
+class Organization extends Model implements Authenticatable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, AuthenticatableTrait, HasApiTokens, Notifiable;
 
     protected $fillable = [
         'name',
@@ -17,6 +21,8 @@ class Organization extends Model
         'license_number',
         'address',
         'contact_email',
+        'email', // Auth email
+        'password',
         'phone',
         'logo',
         'cover_photo',
@@ -32,6 +38,11 @@ class Organization extends Model
         'status',
     ];
 
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     protected $casts = [
         'type' => 'string',
         'status' => 'string',
@@ -39,6 +50,7 @@ class Organization extends Model
         'longitude' => 'decimal:8',
         'operating_hours' => 'array',
         'services' => 'array',
+        'password' => 'hashed',
     ];
 
     public function users(): HasMany

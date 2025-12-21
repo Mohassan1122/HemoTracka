@@ -45,6 +45,8 @@ class AdminSeeder extends Seeder
                 array_merge($orgData, [
                     'address' => 'Admin Seed Location',
                     'contact_email' => 'contact@' . strtolower(str_replace(' ', '', $orgData['name'])) . '.com',
+                    'email' => 'contact@' . strtolower(str_replace(' ', '', $orgData['name'])) . '.com', // Auth email
+                    'password' => Hash::make('password'),
                     'phone' => '090' . rand(10000000, 99999999),
                 ])
             );

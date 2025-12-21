@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             FacilitiesSeeder::class,
             BloodBankSeeder::class,
             DonorBadgeSeeder::class,
+            DetailedSeeder::class,
         ]);
 
         $this->command->info('Database seeded successfully with all roles!');

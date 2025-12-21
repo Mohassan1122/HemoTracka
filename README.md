@@ -2,45 +2,21 @@
 
 A comprehensive Laravel 10 backend API for managing blood donations, inventory, requests, and deliveries.
 
-## 🚀 Quick Start
+
+## 🚀 Quick Start & Deployment
+
+For a detailed step-by-step guide on hosting this project (XAMPP or Production), please refer to **[DEPLOYMENT.md](file:///c:/xampp/htdocs/Sydani_Work/HemoTracka/DEPLOYMENT.md)**.
 
 ### Prerequisites
 - PHP 8.1+
 - Composer
 - MySQL 5.7+
-- XAMPP (or similar)
 
-### Installation
-
-1. **Clone/Copy the project** to your XAMPP htdocs:
-   ```bash
-   # Copy from scratch folder to htdocs
-   xcopy /E /I C:\Users\moham\.gemini\antigravity\scratch\HemoTracka C:\xampp\htdocs\HemoTracka
-   ```
-
-2. **Configure environment**:
-   ```bash
-   cd C:\xampp\htdocs\HemoTracka
-   copy .env.example .env
-   php artisan key:generate
-   ```
-
-3. **Update `.env` with your database credentials**:
-   ```env
-   DB_DATABASE=hemotracka
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
-
-4. **Run migrations and seeders**:
-   ```bash
-   php artisan migrate --seed
-   ```
-
-5. **Start the development server**:
-   ```bash
-   php artisan serve
-   ```
+### Rapid Setup
+1. `copy .env.example .env`
+2. `php artisan key:generate`
+3. `php artisan migrate --seed`
+4. `php artisan serve`
 
 The API will be available at `http://localhost:8000/api`
 

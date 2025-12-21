@@ -30,6 +30,8 @@ class BloodBankSeeder extends Seeder
                     'type' => 'Blood Bank',
                     'address' => 'No 15 Aggrey Road, Port Harcourt',
                     'contact_email' => 'info@phbloodbank.com',
+                    'email' => 'admin@phbloodbank.com', // Auth email
+                    'password' => Hash::make('password'),
                     'phone' => '234812343002',
                     'status' => 'Active',
                     'facebook_link' => 'https://facebook.com/phbloodbank',
@@ -39,19 +41,7 @@ class BloodBankSeeder extends Seeder
                 ]
             );
 
-            // 2. Create a Blood Bank Admin User
-            $bbAdmin = User::updateOrCreate(
-                ['email' => 'admin@phbloodbank.com'],
-                [
-                    'first_name' => 'Dayo',
-                    'last_name' => 'Kingsley',
-                    'password' => Hash::make('password'),
-                    'role' => 'blood_banks',
-                    'phone' => '234812343009',
-                    'organization_id' => $bloodBank->id,
-                    'email_verified_at' => now(),
-                ]
-            );
+            // 2. User creation removed (Entity Auth)
 
             // 3. Create a Hospital for requests
             $hospital = Organization::updateOrCreate(
@@ -61,6 +51,8 @@ class BloodBankSeeder extends Seeder
                     'type' => 'Hospital',
                     'address' => 'BMH Road, Port Harcourt',
                     'contact_email' => 'admin@bmh.com',
+                    'email' => 'admin@bmh.com',
+                    'password' => Hash::make('password'),
                     'phone' => '234812343003',
                     'status' => 'Active',
                 ]

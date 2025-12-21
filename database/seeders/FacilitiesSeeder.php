@@ -23,6 +23,8 @@ class FacilitiesSeeder extends Seeder
                 'name' => 'Kuje National Hospital',
                 'type' => 'Hospital',
                 'contact_email' => 'contact@kujehospital.gov.ng',
+                'email' => 'admin@kujehospital.gov.ng',
+                'password' => Hash::make('password'),
                 'phone' => '08012345678',
                 'address' => '123 Hospital Road, Kuje, Abuja',
                 'status' => 'Active',
@@ -31,19 +33,7 @@ class FacilitiesSeeder extends Seeder
             ]
         );
 
-        // 2. Create a User for this Facility
-        $user = User::updateOrCreate(
-            ['email' => 'admin@kujehospital.gov.ng'],
-            [
-                'organization_id' => $hospital->id,
-                'first_name' => 'Kuje',
-                'last_name' => 'Hospital Admin',
-                'phone' => '08087654321',
-                'password' => Hash::make('password123'),
-                'role' => 'facilities',
-                'email_verified_at' => now(),
-            ]
-        );
+        // 2. User creation removed (Entity Auth)
 
         // 3. Create a Blood Bank to request from
         $bloodBank = Organization::updateOrCreate(
@@ -52,6 +42,8 @@ class FacilitiesSeeder extends Seeder
                 'name' => 'Central Blood Bank Abuja',
                 'type' => 'Blood Bank',
                 'contact_email' => 'info@centralbloodbank.org',
+                'email' => 'info@centralbloodbank.org',
+                'password' => Hash::make('password'),
                 'phone' => '08022223333',
                 'address' => 'Garki District, Abuja',
                 'status' => 'Active',
