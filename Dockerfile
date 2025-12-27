@@ -21,13 +21,28 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 # Install PHP extensions
 RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd zip intl
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Enable Apache modules
+RUN a2enmod rewrite headers
 
-# Configure Apache DocumentRoot to point to public folder
+# Configure Apache
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
+
+# Configure apache to use .htaccess files
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
+# Update the default apache site with the config we want
+RUN { \
+    echo '<VirtualHost *:80>'; \
+    echo '    DocumentRoot ${APACHE_DOCUMENT_ROOT}'; \
+    echo '    <Directory ${APACHE_DOCUMENT_ROOT}>'; \
+    echo '        Options Indexes FollowSymLinks'; \
+    echo '        AllowOverride All'; \
+    echo '        Require all granted'; \
+    echo '    </Directory>'; \
+    echo '    ErrorLog ${APACHE_LOG_DIR}/error.log'; \
+    echo '    CustomLog ${APACHE_LOG_DIR}/access.log combined'; \
+    echo '</VirtualHost>'; \
+} > /etc/apache2/sites-available/000-default.conf
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
