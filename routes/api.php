@@ -198,7 +198,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('rider')->group(function () {
         Route::get('/available', [RiderController::class, 'available']);
         Route::post('/update-location', [RiderController::class, 'updateLocation']);
-        Route::apiResource('riders', RiderController::class)->only(['index', 'show', 'update']);
 
         // Delivery tracking
         Route::get('/deliveries', [DeliveryController::class, 'index']);
