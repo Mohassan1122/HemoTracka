@@ -1,0 +1,12 @@
+.git
+.env
+vendor
+node_modules
+storage/*.key
+public/storage
+public/hot
+.phpunit.result.cache
+_ide_helper.php
+_ide_helper_models.php
+npm-debug.log
+yarn-error.log
