@@ -16,37 +16,42 @@ use Illuminate\Support\Facades\Artisan;
 
 // Temporary route to run migrations (REMOVE AFTER USE)
 Route::get('/migrate', function() {
-    // Simple IP restriction for security (you can add your IP if needed)
-    $allowedIps = ['127.0.0.1', '::1'];
     $clientIp = request()->ip();
-    
     \Illuminate\Support\Facades\Log::info('Migration attempt from IP: ' . $clientIp);
-    
-    if (!in_array($clientIp, $allowedIps)) {
-        \Illuminate\Support\Facades\Log::warning('Unauthorized migration attempt from IP: ' . $clientIp);
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Unauthorized',
-            'your_ip' => $clientIp
-        ], 403);
-    }
-    
+
     try {
+        // Check if .env exists
+        if (!file_exists(base_path('.env'))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => '.env file not found',
+                'path' => base_path('.')
+            ], 500);
+        }
+
+        // Get database configuration
+        $dbConfig = [
+            'driver' => env('DB_CONNECTION', 'mysql'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'forge'),
+            'username' => env('DB_USERNAME', 'forge'),
+            'password' => env('DB_PASSWORD', ''),
+        ];
+
+        \Illuminate\Support\Facades\Log::info('Database config: ' . json_encode($dbConfig));
+
         // Test database connection
         \Illuminate\Support\Facades\DB::connection()->getPdo();
-        
-        // Run migrations with output buffer
-        ob_start();
+        \Illuminate\Support\Facades\Log::info('Database connection successful');
+
+        // Run migrations
         \Illuminate\Support\Facades\Artisan::call('migrate:status');
-        $status = ob_get_clean();
-        
-        ob_start();
+        $status = \Illuminate\Support\Facades\Artisan::output();
+
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        $output = ob_get_clean();
-        
-        \Illuminate\Support\Facades\Log::info("Migration status: " . $status);
-        \Illuminate\Support\Facades\Log::info("Migration output: " . $output);
-        
+        $output = \Illuminate\Support\Facades\Artisan::output();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Migrations completed successfully!',
@@ -61,9 +66,9 @@ Route::get('/migrate', function() {
         ]);
         
         return response()->json([
-            'error' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile() . ':' . $e->getLine(),
             'trace' => $e->getTraceAsString()
         ], 500);
     }
