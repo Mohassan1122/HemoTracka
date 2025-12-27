@@ -47,20 +47,23 @@
             "@php artisan key:generate --ansi"
         ]
     },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "platform": {
+            "php": "8.4"
+        },
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
     "extra": {
         "branch-alias": {
             "dev-master": "10.x-dev"
         },
         "laravel": {
             "dont-discover": []
-        }
-    },
-    "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true
         }
     },
     "minimum-stability": "stable",
