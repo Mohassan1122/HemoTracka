@@ -70,9 +70,9 @@ WORKDIR /var/www/html
 # Copy only composer files first for better caching
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies
+# Install PHP dependencies (skip scripts until app is copied to avoid missing artisan)
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
 
 # Copy the rest of the application
 COPY . .
@@ -81,6 +81,10 @@ COPY . .
 RUN if [ -f "package.json" ]; then \
     npm install && npm run build; \
     fi
+
+# Run composer scripts and discovery now that the app files (including artisan) are present
+RUN composer dump-autoload --optimize && \
+    if [ -f artisan ]; then php artisan package:discover --ansi || true; fi
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
