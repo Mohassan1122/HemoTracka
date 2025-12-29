@@ -32,6 +32,9 @@ RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd zip intl
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
+# Disable conflicting MPMs and enable prefork
+RUN a2dismod mpm_event mpm_worker && a2enmod mpm_prefork
+
 # Configure PHP
 RUN echo "error_log = /var/log/php_errors.log" > /usr/local/etc/php/conf.d/error-logging.ini && \
     echo "display_errors = On" >> /usr/local/etc/php/conf.d/error-logging.ini && \
