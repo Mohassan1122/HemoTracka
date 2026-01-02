@@ -12,6 +12,10 @@ RUN apt-get update \
     && a2dismod mpm_event mpm_worker mpm_itk mpm_threadpool || true \
     && rm -rf /var/lib/apt/lists/*
 
+
+# Ensure Apache log directory exists
+RUN mkdir -p /var/log/apache2
+
 # Configure Apache to use PHP-FPM
 RUN echo "<VirtualHost *:80>\n\
     DocumentRoot /var/www/html/public\n\
@@ -22,8 +26,8 @@ RUN echo "<VirtualHost *:80>\n\
     <FilesMatch \.php$>\n\
         SetHandler \"proxy:unix:/var/run/php/php-fpm.sock|fcgi://localhost/\"\n\
     </FilesMatch>\n\
-    ErrorLog \\${APACHE_LOG_DIR}/error.log\n\
-    CustomLog \\${APACHE_LOG_DIR}/access.log combined\n\
+    ErrorLog /var/log/apache2/error.log\n\
+    CustomLog /var/log/apache2/access.log combined\n\
 </VirtualHost>" > /etc/apache2/sites-available/000-default.conf
 
 # Configure PHP-FPM to use a Unix socket
