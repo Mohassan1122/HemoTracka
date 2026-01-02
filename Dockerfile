@@ -30,9 +30,11 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd zip intl
 
 # Enable Apache modules
+
+# Enable Apache modules
 RUN a2enmod rewrite headers
 
-# Disable conflicting MPMs and enable prefork
+# Final: Disable conflicting MPMs and enable prefork (must be last Apache mod step)
 RUN a2dismod mpm_event mpm_worker && a2enmod mpm_prefork
 
 # Configure PHP
