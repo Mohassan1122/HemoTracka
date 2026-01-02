@@ -34,8 +34,13 @@ RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd zip intl
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
-# Final: Disable conflicting MPMs and enable prefork (must be last Apache mod step)
-RUN a2dismod mpm_event mpm_worker && a2enmod mpm_prefork
+
+# Copy entrypoint script to container and set permissions
+COPY scripts/docker-entrypoint-fixmpm.sh /usr/local/bin/docker-entrypoint-fixmpm.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint-fixmpm.sh
+
+# Use custom entrypoint to always fix MPMs before starting Apache
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-fixmpm.sh"]
 
 # Configure PHP
 RUN echo "error_log = /var/log/php_errors.log" > /usr/local/etc/php/conf.d/error-logging.ini && \
