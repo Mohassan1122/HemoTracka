@@ -1,3 +1,7 @@
+# Copy custom Apache MPM config
+COPY config/apache/mpm_prefork.conf /etc/apache2/mods-available/mpm_prefork.conf
+RUN a2dismod mpm_event mpm_worker mpm_threadpool mpm_itk || true \
+    && a2enmod mpm_prefork
 FROM php:8.4-apache
 
 # Set environment variables
