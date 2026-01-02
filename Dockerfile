@@ -39,5 +39,11 @@ RUN chown -R www-data:www-data /var/www/html
 # Expose port
 EXPOSE 80
 
-# Start both PHP-FPM and Apache
-CMD service php8.4-fpm start && apachectl -D FOREGROUND
+# Install supervisor
+RUN apt-get update && apt-get install -y supervisor && rm -rf /var/lib/apt/lists/*
+
+# Copy supervisor config
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Start both PHP-FPM and Apache with supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
