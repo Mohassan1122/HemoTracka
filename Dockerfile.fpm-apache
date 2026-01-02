@@ -1,0 +1,42 @@
+# Use PHP FPM base image
+FROM php:8.4-fpm
+
+# Install Apache and required modules
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends apache2 libapache2-mod-fcgid libpng-dev libjpeg-dev libfreetype6-dev libzip-dev libonig-dev libxml2-dev libicu-dev libpq-dev git unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd intl pdo_pgsql zip mbstring xml \
+    && a2enmod rewrite headers proxy proxy_fcgi setenvif \
+    && a2enmod mpm_prefork \
+    && a2dismod mpm_event mpm_worker mpm_itk mpm_threadpool || true \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure Apache to use PHP-FPM
+RUN echo "<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+    <FilesMatch \.php$>\n\
+        SetHandler \"proxy:unix:/var/run/php/php-fpm.sock|fcgi://localhost/\"\n\
+    </FilesMatch>\n\
+    ErrorLog \\${APACHE_LOG_DIR}/error.log\n\
+    CustomLog \\${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
+
+# Configure PHP-FPM to use a Unix socket
+RUN mkdir -p /var/run/php && \
+    sed -i 's|listen = .*|listen = /var/run/php/php-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf
+
+# Copy application code
+COPY . /var/www/html
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html
+
+# Expose port
+EXPOSE 80
+
+# Start both PHP-FPM and Apache
+CMD service php8.4-fpm start && apachectl -D FOREGROUND
