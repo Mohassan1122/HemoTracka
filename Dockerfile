@@ -34,8 +34,16 @@ RUN echo "<VirtualHost *:80>\n\
 RUN mkdir -p /var/run/php && \
     sed -i 's|listen = .*|listen = /var/run/php/php-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf
 
+
 # Copy application code
 COPY . /var/www/html
+
+# Install Composer dependencies
+WORKDIR /var/www/html
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-interaction --prefer-dist --optimize-autoloader \
+    && rm composer-setup.php
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
