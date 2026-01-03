@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->enum('blood_group', ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
-            $table->enum('type', ['Whole Blood', 'RBC', 'PLT', 'FFP', 'Cryo'])->default('Whole Blood');
+            $table->enum('type', ['Whole Blood', 'RBC', 'PLT', 'FFP', 'Cryo', 'Platelets'])->default('Whole Blood');
             $table->integer('units_in_stock')->default(0);
             $table->integer('threshold')->default(10);
             $table->string('location', 100)->nullable();
