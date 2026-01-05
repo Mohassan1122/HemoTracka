@@ -24,7 +24,7 @@ RUN echo "<VirtualHost *:80>\n\
         Require all granted\n\
     </Directory>\n\
     <FilesMatch \.php$>\n\
-        SetHandler \"proxy:unix:/var/run/php/php-fpm.sock|fcgi://localhost/\"\n\
+     SetHandler "proxy:fcgi://127.0.0.1:9000"\n\  
     </FilesMatch>\n\
     ErrorLog /var/log/apache2/error.log\n\
     CustomLog /var/log/apache2/access.log combined\n\
@@ -32,8 +32,7 @@ RUN echo "<VirtualHost *:80>\n\
 
 # Configure PHP-FPM to use a Unix socket
 RUN mkdir -p /var/run/php && \
-    sed -i 's|listen = .*|listen = /var/run/php/php-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf
-
+   sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf
 
 # Copy application code
 COPY . /var/www/html
