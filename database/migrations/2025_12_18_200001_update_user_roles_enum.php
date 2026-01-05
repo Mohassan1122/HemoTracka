@@ -17,7 +17,7 @@ return new class extends Migration {
     public function up(): void
     {
         // For MySQL, we need to alter the enum
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'staff', 'donor', 'rider', 'regulator', 'blood_bank_staff', 'hospital_staff') DEFAULT 'donor'");
+        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'staff', 'donor', 'rider', 'regulator', 'blood_bank_staff', 'hospital_staff')");
 
         // Migrate existing 'staff' users based on their organization type
         // staff at Blood Bank organizations -> blood_bank_staff
