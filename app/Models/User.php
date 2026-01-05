@@ -16,6 +16,13 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
+    // Role constants (application-level enforcement)
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_DONOR = 'donor';
+    public const ROLE_RIDER = 'rider';
+    public const ROLE_FACILITIES = 'facilities';
+    public const ROLE_BLOOD_BANKS = 'blood_banks';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -125,16 +132,24 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the list of valid user roles.
+     * Get the list of valid user roles (value => label).
      */
     public static function getValidRoles(): array
     {
         return [
-            'admin' => 'Administrator',
-            'donor' => 'Blood Donor',
-            'rider' => 'Delivery Rider',
-            'facilities' => 'Facilities (Hospitals/Regulatory Bodies)',
-            'blood_banks' => 'Blood Banks',
+            self::ROLE_ADMIN => 'Administrator',
+            self::ROLE_DONOR => 'Blood Donor',
+            self::ROLE_RIDER => 'Delivery Rider',
+            self::ROLE_FACILITIES => 'Facilities (Hospitals/Regulatory Bodies)',
+            self::ROLE_BLOOD_BANKS => 'Blood Banks',
         ];
+    }
+
+    /**
+     * Get only the role values (for Rule::in)
+     */
+    public static function validRoleValues(): array
+    {
+        return array_keys(self::getValidRoles());
     }
 }

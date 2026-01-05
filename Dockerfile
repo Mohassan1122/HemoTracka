@@ -6,7 +6,7 @@ FROM php:8.4-fpm
 RUN apt-get update \
     && apt-get install -y --no-install-recommends apache2 libapache2-mod-fcgid libpng-dev libjpeg-dev libfreetype6-dev libzip-dev libonig-dev libxml2-dev libicu-dev libpq-dev git unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd intl pdo_pgsql pdo pdo_mysql zip mbstring xml \
+    && docker-php-ext-install -j$(nproc) gd intl pdo_pgsql pgsql pdo pdo_mysql zip mbstring xml \
     && a2enmod rewrite headers proxy proxy_fcgi setenvif \
     && a2enmod mpm_prefork \
     && a2dismod mpm_event mpm_worker mpm_itk mpm_threadpool || true \
