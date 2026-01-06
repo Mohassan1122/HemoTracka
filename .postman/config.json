@@ -1,0 +1,16 @@
+{
+  "workspace": {
+    "id": "ad27c4ac-3aef-486d-87f6-795f95884bb5"
+  },
+  "entities": {
+    "collections": [
+      "..\\HemoTracka.postman_collection.json"
+    ],
+    "environments": [],
+    "specs": [
+      "..\\openapi.yaml"
+    ],
+    "flows": [],
+    "globals": []
+  }
+}

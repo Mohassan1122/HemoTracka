@@ -38,6 +38,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'date_of_birth',
         'gender',
+        'profile_picture',
     ];
 
     /**
@@ -59,6 +60,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at' => 'datetime',
         'date_of_birth' => 'date',
         'password' => 'hashed',
+        'profile_picture' => 'string',
     ];
 
     public function organization(): BelongsTo
@@ -104,6 +106,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";
+    }
+
+    public function getProfilePictureUrlAttribute(): ?string
+    {
+        return $this->profile_picture ? asset('storage/' . $this->profile_picture) : null;
     }
 
     public function isAdmin(): bool

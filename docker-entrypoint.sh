@@ -38,6 +38,11 @@ chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 mkdir -p /var/www/html/storage/framework/{sessions,views,cache}
 mkdir -p /var/www/html/storage/logs
 
+# Create storage symlink if it doesn't exist
+if [ ! -L /var/www/html/public/storage ]; then
+    php artisan storage:link
+fi
+
 # Cache configuration
 php artisan config:cache
 php artisan route:cache

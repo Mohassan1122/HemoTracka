@@ -375,9 +375,42 @@ class FacilitiesController extends Controller
             'address' => ['sometimes', 'string'],
             'operating_hours' => ['sometimes', 'array'],
             'description' => ['sometimes', 'string'],
+            'services' => ['sometimes', 'array'],
+            'facebook_link' => ['sometimes', 'string', 'url'],
+            'twitter_link' => ['sometimes', 'string', 'url'],
+            'instagram_link' => ['sometimes', 'string', 'url'],
+            'linkedin_link' => ['sometimes', 'string', 'url'],
+            'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
+            'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
+            'logo' => ['sometimes', 'image', 'max:2048'],
+            'cover_photo' => ['sometimes', 'image', 'max:5120'], // Larger size limit for cover photos
         ]);
 
-        $organization->update($validated);
+        // Handle logo upload if provided
+        if ($request->hasFile('logo')) {
+            $image = $request->file('logo');
+            $filename = time() . '_logo_' . $image->getClientOriginalName();
+            $path = $image->storeAs('organization_logos', $filename, 'public');
+            $validated['logo'] = $path;
+        }
+
+        // Handle cover photo upload if provided
+        if ($request->hasFile('cover_photo')) {
+            $image = $request->file('cover_photo');
+            $filename = time() . '_cover_' . $image->getClientOriginalName();
+            $path = $image->storeAs('organization_covers', $filename, 'public');
+            $validated['cover_photo'] = $path;
+        }
+
+        // Prepare update data excluding file fields if they weren't provided
+        $updateData = [];
+        foreach ($validated as $key => $value) {
+            if (!in_array($key, ['logo', 'cover_photo']) || $value !== null) {
+                $updateData[$key] = $value;
+            }
+        }
+
+        $organization->update($updateData);
 
         return response()->json([
             'message' => 'Organization profile updated successfully',

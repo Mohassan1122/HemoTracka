@@ -31,6 +31,8 @@ class AuthController extends Controller
 
     private function registerUser(Request $request): JsonResponse
     {
+        $role = $request->input('role', 'donor');
+        
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
@@ -40,7 +42,22 @@ class AuthController extends Controller
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'in:Male,Female,Other'],
             'role' => ['nullable', 'in:admin,donor,rider'],
+            'profile_picture' => ['nullable', 'image', 'max:2048'], // Optional profile picture
+            // Donor-specific fields
+            'blood_group' => ['nullable', 'string', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'genotype' => ['nullable', 'string', 'max:10'],
+            'height' => ['nullable', 'string', 'max:10'],
+            'address' => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
+
+        // Handle profile picture upload if provided
+        if ($request->hasFile('profile_picture')) {
+            $image = $request->file('profile_picture');
+            $filename = time() . '_' . $image->getClientOriginalName();
+            $path = $image->storeAs('profile_pictures', $filename, 'public');
+            $validated['profile_picture'] = $path;
+        }
 
         $user = User::create([
             'first_name' => $validated['first_name'],
@@ -51,7 +68,27 @@ class AuthController extends Controller
             'date_of_birth' => $validated['date_of_birth'] ?? null,
             'gender' => $validated['gender'] ?? null,
             'role' => $validated['role'] ?? 'donor',
+            'profile_picture' => $validated['profile_picture'] ?? null,
         ]);
+
+        // If the user is registering as a donor, also create a donor record
+        if ($role === 'donor') {
+            $donorData = [
+                'user_id' => $user->id,
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'blood_group' => $validated['blood_group'] ?? null,
+                'genotype' => $validated['genotype'] ?? null,
+                'height' => $validated['height'] ?? null,
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'phone' => $validated['phone'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'Eligible', // Default status
+            ];
+            
+            \App\Models\Donor::create($donorData);
+        }
 
         event(new Registered($user));
 
@@ -59,7 +96,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registration successful.',
-            'user' => $user,
+            'user' => $user->load(['donor', 'organization']), // Load the donor relationship
             'token' => $token,
             'token_type' => 'Bearer',
         ], 201);
@@ -75,6 +112,8 @@ class AuthController extends Controller
             'phone' => ['required', 'string', 'max:20'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'type' => ['required', 'in:Hospital,Blood Bank'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],  // Optional latitude
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],  // Optional longitude
         ]);
 
         // Map role to type strictly if needed, or trust input type
@@ -88,6 +127,8 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'type' => $validated['type'],
             'status' => 'Pending',
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
         ]);
 
         $token = $organization->createToken('auth_token')->plainTextToken;
@@ -112,31 +153,48 @@ class AuthController extends Controller
 
         // 1. Try finding User
         $user = User::where('email', $validated['email'])->first();
-        if ($user && Hash::check($validated['password'], $user->password)) {
-            $token = $user->createToken('auth_token')->plainTextToken;
-            return response()->json([
-                'message' => 'Login successful',
-                'user' => $user->load('organization'),
-                'token' => $token,
-                'token_type' => 'Bearer',
-            ]);
+        if ($user) {
+            // User exists, check password
+            if (Hash::check($validated['password'], $user->password)) {
+                $token = $user->createToken('auth_token')->plainTextToken;
+                return response()->json([
+                    'message' => 'Login successful',
+                    'user' => $user->load('organization'),
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                ]);
+            } else {
+                // Password is incorrect
+                return response()->json([
+                    'message' => 'Incorrect password',
+                ], 401);
+            }
         }
 
         // 2. Try finding Organization
         $org = \App\Models\Organization::where('email', $validated['email'])->first();
-        if ($org && Hash::check($validated['password'], $org->password)) {
-            $token = $org->createToken('auth_token')->plainTextToken;
-            return response()->json([
-                'message' => 'Login successful',
-                'user' => $org,
-                'role' => $org->type === 'Hospital' ? 'facilities' : 'blood_banks', // Helper for frontend
-                'token' => $token,
-                'token_type' => 'Bearer',
-            ]);
+        if ($org) {
+            // Organization exists, check password
+            if (Hash::check($validated['password'], $org->password)) {
+                $token = $org->createToken('auth_token')->plainTextToken;
+                return response()->json([
+                    'message' => 'Login successful',
+                    'user' => $org,
+                    'role' => $org->type === 'Hospital' ? 'facilities' : 'blood_banks', // Helper for frontend
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                ]);
+            } else {
+                // Password is incorrect
+                return response()->json([
+                    'message' => 'Incorrect password',
+                ], 401);
+            }
         }
 
+        // Neither user nor organization exists with this email
         return response()->json([
-            'message' => 'Invalid credentials',
+            'message' => 'Account does not exist',
         ], 401);
     }
 
@@ -169,19 +227,66 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
+        // Prepare validation rules
+        $rules = [
             'first_name' => ['sometimes', 'string', 'max:255'],
             'last_name' => ['sometimes', 'string', 'max:255'],
             'phone' => ['sometimes', 'string', 'max:20', 'unique:users,phone,' . $user->id],
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'in:Male,Female,Other'],
-        ]);
+        ];
 
-        $user->update($validated);
+        // Add profile picture validation if it's present in the request
+        if ($request->hasFile('profile_picture')) {
+            $rules['profile_picture'] = ['sometimes', 'image', 'max:2048'];
+        }
+
+        // Add donor-specific fields validation if user is a donor
+        if ($user->role === 'donor' && $user->donor) {
+            $rules = array_merge($rules, [
+                'blood_group' => ['sometimes', 'string', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+                'genotype' => ['sometimes', 'string', 'max:10'],
+                'height' => ['sometimes', 'string', 'max:10'],
+                'address' => ['sometimes', 'string'],
+                'notes' => ['sometimes', 'string'],
+            ]);
+        }
+
+        $validated = $request->validate($rules);
+
+        // Handle profile picture upload if provided
+        if ($request->hasFile('profile_picture')) {
+            $image = $request->file('profile_picture');
+            $filename = time() . '_' . $image->getClientOriginalName();
+            $path = $image->storeAs('profile_pictures', $filename, 'public');
+            $validated['profile_picture'] = $path;
+        }
+
+        // Update user table
+        $user->update(array_filter($validated, function ($key) {
+            return in_array($key, [
+                'first_name', 'last_name', 'phone', 'date_of_birth', 
+                'gender', 'profile_picture'
+            ]);
+        }, ARRAY_FILTER_USE_KEY));
+
+        // If user is a donor, also update the donor table
+        if ($user->role === 'donor' && $user->donor) {
+            $donorUpdates = array_filter($validated, function ($key) {
+                return in_array($key, [
+                    'first_name', 'last_name', 'blood_group', 'genotype', 
+                    'height', 'date_of_birth', 'address', 'phone', 'notes'
+                ]);
+            }, ARRAY_FILTER_USE_KEY);
+            
+            if (!empty($donorUpdates)) {
+                $user->donor->update($donorUpdates);
+            }
+        }
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'user' => $user->fresh(),
+            'user' => $user->fresh()->load(['organization', 'donor', 'rider']),
         ]);
     }
 
