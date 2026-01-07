@@ -98,6 +98,19 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // =========================================================================
+    // BLOOD REQUEST ROUTES (Accessible to all authenticated users)
+    // =========================================================================
+    Route::post('/blood-requests/{bloodRequest}/cancel', [BloodRequestController::class, 'cancel']);
+    Route::apiResource('blood-requests', BloodRequestController::class)->parameters(['blood-requests' => 'bloodRequest']);
+
+    // User Requests (Personal blood requests for the authenticated user)
+    Route::prefix('user-requests')->group(function () {
+        Route::get('/', [BloodRequestController::class, 'myRequests']);
+        Route::get('/stats', [BloodRequestController::class, 'requestStats']);
+        Route::post('/{userRequest}/mark-as-read', [BloodRequestController::class, 'markAsRead']);
+    });
+
+    // =========================================================================
     // 2. DONOR ROUTES (/donor)
     // =========================================================================
     Route::prefix('donor')->group(function () {
@@ -139,17 +152,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Appointments (Facilitating availability)
         Route::get('/organizations/{organization}/available-slots', [AppointmentController::class, 'availableSlots']);
-
-        // Legacy/Generic Blood Request actions (if still needed here)
-        Route::post('/blood-requests/{bloodRequest}/cancel', [BloodRequestController::class, 'cancel']);
-        Route::apiResource('blood-requests', BloodRequestController::class)->parameters(['blood-requests' => 'bloodRequest']);
-
-        // User Requests (Personal blood requests for the authenticated user)
-        Route::prefix('user-requests')->group(function () {
-            Route::get('/', [BloodRequestController::class, 'myRequests']);
-            Route::get('/stats', [BloodRequestController::class, 'requestStats']);
-            Route::post('/{userRequest}/mark-as-read', [BloodRequestController::class, 'markAsRead']);
-        });
 
         // Multi-Offer System
         Route::get('/blood-requests/{bloodRequest}/offers', [OfferController::class, 'index']);
