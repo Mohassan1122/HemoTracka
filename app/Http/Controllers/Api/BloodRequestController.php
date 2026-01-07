@@ -33,8 +33,13 @@ class BloodRequestController extends Controller
             $query->where('blood_group', $request->blood_group);
         }
 
-        if ($request->has('urgency_level')) {
-            $query->where('urgency_level', $request->urgency_level);
+        if ($request->has('is_emergency')) {
+            $isEmergency = filter_var($request->get('is_emergency'), FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_emergency', $isEmergency);
+        }
+
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
         }
 
         $requests = $query->latest()->paginate($request->get('per_page', 15));
