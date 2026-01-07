@@ -56,17 +56,41 @@ In many regions, patients die because hospitals cannot locate the right blood ty
 
 ## 🔄 The Life Cycle of a Request
 
+### Request Creation
 1.  **The Emergency**: A patient at *City General Hospital* needs 2 units of B- blood.
-2.  **The Search**: The Hospital creates a **Blood Request** (`POST /facilities/blood-requests`).
-3.  **The Match**: *Central Blood Bank* sees the request on their dashboard (`GET /blood-bank/requests`). They have the stock, so they **Submit an Offer** to supply it.
-4.  **The Deal**: The Hospital **Accepts the Offer** and processes payment.
-5.  **The Dispatch**: The system automatically assigns a **Rider**.
-6.  **The Journey**:
+2.  **The Request**: The Hospital creates a **Blood Request** with:
+    - **Type**: Blood, Platelets, or Bone Marrow
+    - **Request Source**: Who should be notified?
+      - `donors` - All registered blood donors
+      - `blood_banks` - All registered blood banks
+      - `both` - Both donors and blood banks
+    - **Blood Details**: Group, Genotype (if needed)
+    - **Quantity**: Units needed & minimum bank can send
+    - **Timeline**: When it's needed by
+    - **Emergency**: Mark if critical
+
+### User Request Distribution
+3.  **Automatic Distribution**: Based on `request_source`, the system automatically creates `UserRequest` entries for:
+    - All matching users (donors/blood_banks/both)
+    - Each user gets a notification
+    - Each user can see it in their dashboard with `is_read` status
+
+### Request Fulfillment
+4.  **The Match**: *Central Blood Bank* sees the request on their dashboard. They have the stock, so they **Submit an Offer** to supply it.
+5.  **The Deal**: The Hospital **Accepts the Offer** and processes payment.
+6.  **The Dispatch**: The system automatically assigns a **Rider**.
+7.  **The Journey**:
     *   Rider gets notified.
     *   Rider goes to Blood Bank -> **Picked Up**.
     *   Rider drives to Hospital -> **In Transit**.
     *   Rider arrives -> **Delivered**.
-7.  **The Closure**: The Hospital confirms receipt and rates the service.
+8.  **The Closure**: The Hospital confirms receipt and rates the service.
+
+### User Request Tracking
+- When a user views a blood request via `GET /api/blood-requests/{id}`, their `UserRequest.is_read` is automatically set to `true`
+- Users can fetch their personal requests via `GET /api/user-requests`
+- Users can see statistics of their requests via `GET /api/user-requests/stats`
+- Users can manually mark requests as read via `POST /api/user-requests/{id}/mark-as-read`
 
 
 ---

@@ -82,15 +82,33 @@ The API will be available at `http://localhost:8000/api`
 | GET    | `/api/inventory/summary`              | Get summary by blood group |
 
 ### Blood Requests
-| Method | Endpoint                                | Description       |
-|--------|-----------------------------------------|-------------------|
-| GET    | `/api/blood-requests`                   | List requests     |
-| POST   | `/api/blood-requests`                   | Create request    |
-| GET    | `/api/blood-requests/{id}`              | Get request       |
-| PUT    | `/api/blood-requests/{id}`              | Update request    |
-| DELETE | `/api/blood-requests/{id}`              | Delete request    |
-| POST   | `/api/blood-requests/{id}/approve`      | Approve request   |
-| POST   | `/api/blood-requests/{id}/cancel`       | Cancel request    |
+| Method | Endpoint                                | Description                          | Query Params |
+|--------|-----------------------------------------|--------------------------------------|--------------|
+| GET    | `/api/blood-requests`                   | List all blood requests              | `organization_id`, `status`, `blood_group`, `is_emergency`, `type`, `per_page` |
+| POST   | `/api/blood-requests`                   | Create new blood request             | - |
+| GET    | `/api/blood-requests/{id}`              | Get specific request (marks as read) | - |
+| PUT    | `/api/blood-requests/{id}`              | Update request                       | - |
+| DELETE | `/api/blood-requests/{id}`              | Delete request                       | - |
+| POST   | `/api/blood-requests/{id}/approve`      | Approve request & create delivery    | - |
+| POST   | `/api/blood-requests/{id}/cancel`       | Cancel request                       | - |
+
+### User Requests (Personal Blood Requests)
+| Method | Endpoint                                      | Description                    | Query Params |
+|--------|-----------------------------------------------|--------------------------------|--------------|
+| GET    | `/api/user-requests`                          | Get my blood requests          | `is_read`, `request_source`, `status`, `per_page` |
+| GET    | `/api/user-requests/stats`                    | Get my request statistics      | - |
+| POST   | `/api/user-requests/{id}/mark-as-read`        | Mark request as read           | - |
+
+**Blood Request Fields:**
+- `type` (required): `Blood`, `Platelets`, `Bone Marrow`
+- `request_source` (required): `donors`, `blood_banks`, `both` - determines who gets notified
+- `blood_group`: A+, A-, B+, B-, AB+, AB-, O+, O- (required for Blood type)
+- `genotype`: Optional blood genotype
+- `units_needed` (required): Number of units
+- `min_units_bank_can_send` (required): Minimum units bank can provide
+- `is_emergency` (required): Boolean flag for emergency
+- `needed_by` (required): ISO datetime when needed
+- `status`: `Pending`, `Approved`, `Sourcing`, `In Transit`, `Completed`, `Cancelled`
 
 ### Deliveries
 | Method | Endpoint                                | Description        |
@@ -98,7 +116,6 @@ The API will be available at `http://localhost:8000/api`
 | GET    | `/api/deliveries`                       | List deliveries    |
 | GET    | `/api/deliveries/{id}`                  | Get delivery       |
 | PUT    | `/api/deliveries/{id}`                  | Update delivery    |
-| POST   | `/api/deliveries/{id}/assign-rider`     | Assign rider       |
 | POST   | `/api/deliveries/{id}/pick-up`          | Mark picked up     |
 | POST   | `/api/deliveries/{id}/in-transit`       | Mark in transit    |
 | POST   | `/api/deliveries/{id}/complete`         | Mark delivered     |
@@ -218,6 +235,44 @@ The system includes these notifications:
 - `LowStockAlertNotification` - When inventory falls below threshold
 - `DonationRecordedNotification` - Thank you notification for donors
 
+## � Media File URLs (Mobile App Integration)
+
+All API responses that include media files now include full URLs for mobile app usage:
+
+### User Profile Pictures
+```json
+{
+  "id": 1,
+  "first_name": "John",
+  "profile_picture": "users/profile-1.jpg",
+  "profile_picture_url": "http://hemotracka.onrender.com/storage/users/profile-1.jpg"
+}
+```
+
+### Organization Logos & Cover Photos
+```json
+{
+  "id": 1,
+  "name": "Central Hospital",
+  "logo": "logos/hospital.png",
+  "logo_url": "http://hemotracka.onrender.com/storage/logos/hospital.png",
+  "cover_photo": "covers/banner.jpg",
+  "cover_photo_url": "http://hemotracka.onrender.com/storage/covers/banner.jpg"
+}
+```
+
+### Badge Icons
+```json
+{
+  "id": 1,
+  "name": "Gold Donor",
+  "icon": "badges/gold-donor.png",
+  "icon_url": "http://hemotracka.onrender.com/storage/badges/gold-donor.png"
+}
+```
+
+**Note**: All file URLs are automatically included in API responses. Use the `*_url` attributes in your mobile app for direct image loading.
+
 ## 📁 Project Structure
 
 ```
@@ -247,6 +302,8 @@ app/
 │   ├── Delivery.php
 │   ├── Rider.php
 │   ├── Message.php
+│   ├── UserRequest.php
+│   └── DonorBadge.php
 │   ├── Setting.php
 │   └── Feedback.php
 └── Notifications/
