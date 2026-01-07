@@ -16,14 +16,15 @@ class BloodRequest extends Model
     protected $fillable = [
         'organization_id',
         'blood_group',
+        'genotype',
         'units_needed',
-        'patient_name',
-        'hospital_unit',
+        'min_units_bank_can_send',
         'source_type',
+        'request_source',
         'type',
         'bone_marrow_type',
         'platelets_type',
-        'urgency_level',
+        'is_emergency',
         'needed_by',
         'status',
         'product_fee',
@@ -55,5 +56,10 @@ class BloodRequest extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function userRequests(): HasMany
+    {
+        return $this->hasMany(UserRequest::class);
     }
 }

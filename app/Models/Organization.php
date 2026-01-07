@@ -53,6 +53,11 @@ class Organization extends Model implements Authenticatable
         'password' => 'hashed',
     ];
 
+    protected $appends = [
+        'logo_url',
+        'cover_photo_url',
+    ];
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
@@ -96,5 +101,21 @@ class Organization extends Model implements Authenticatable
     public function offers(): HasMany
     {
         return $this->hasMany(Offer::class);
+    }
+
+    /**
+     * Get the logo URL for API responses.
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo ? asset('storage/' . $this->logo) : null;
+    }
+
+    /**
+     * Get the cover photo URL for API responses.
+     */
+    public function getCoverPhotoUrlAttribute(): ?string
+    {
+        return $this->cover_photo ? asset('storage/' . $this->cover_photo) : null;
     }
 }

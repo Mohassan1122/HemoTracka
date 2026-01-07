@@ -63,6 +63,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'profile_picture' => 'string',
     ];
 
+    protected $appends = [
+        'profile_picture_url',
+    ];
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);

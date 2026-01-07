@@ -144,6 +144,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/blood-requests/{bloodRequest}/cancel', [BloodRequestController::class, 'cancel']);
         Route::apiResource('blood-requests', BloodRequestController::class)->parameters(['blood-requests' => 'bloodRequest']);
 
+        // User Requests (Personal blood requests for the authenticated user)
+        Route::prefix('user-requests')->group(function () {
+            Route::get('/', [BloodRequestController::class, 'myRequests']);
+            Route::get('/stats', [BloodRequestController::class, 'requestStats']);
+            Route::post('/{userRequest}/mark-as-read', [BloodRequestController::class, 'markAsRead']);
+        });
+
         // Multi-Offer System
         Route::get('/blood-requests/{bloodRequest}/offers', [OfferController::class, 'index']);
         Route::post('/offers/{offer}/accept', [OfferController::class, 'accept']);

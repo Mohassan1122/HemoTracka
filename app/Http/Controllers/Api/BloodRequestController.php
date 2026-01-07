@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BloodRequest;
 use App\Models\Delivery;
 use App\Models\User;
+use App\Models\UserRequest;
 use App\Notifications\NewBloodRequestNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\JsonResponse;
@@ -48,23 +49,27 @@ class BloodRequestController extends Controller
     {
         $validated = $request->validate([
             'organization_id' => ['required', 'exists:organizations,id'],
-            'blood_group' => ['required', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'type' => ['required', 'in:Blood,Platelets,Bone Marrow'],
+            'request_source' => ['required', 'in:donors,blood_banks,both'],
+            'blood_group' => ['required_if:type,Blood', 'nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'genotype' => ['nullable', 'string', 'max:50'],
             'units_needed' => ['required', 'integer', 'min:1'],
-            'patient_name' => ['nullable', 'string', 'max:100'],
-            'hospital_unit' => ['nullable', 'string', 'max:50'],
-            'type' => ['required', 'in:Emergent,Bulk,Routine'],
-            'urgency_level' => ['required', 'in:Critical,High,Normal'],
+            'min_units_bank_can_send' => ['required', 'integer', 'min:1'],
             'needed_by' => ['required', 'date'],
+            'is_emergency' => ['boolean'],
             'notes' => ['nullable', 'string'],
         ]);
 
+        // Set default values
+        $validated['status'] = 'Pending';
+        if (!isset($validated['is_emergency'])) {
+            $validated['is_emergency'] = false;
+        }
+
         $bloodRequest = BloodRequest::create($validated);
 
-        // Notify Blood Banks and Admins
-        $usersToNotify = User::whereIn('role', ['blood_bank', 'admin'])->get();
-        if ($usersToNotify->count() > 0) {
-            Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
-        }
+        // Distribute request to users based on request_source
+        $this->distributeRequestToUsers($bloodRequest);
 
         return response()->json([
             'message' => 'Blood request created successfully',
@@ -73,12 +78,56 @@ class BloodRequestController extends Controller
     }
 
     /**
-     * Display the specified blood request.
+     * Distribute blood request to appropriate users based on request_source.
      */
-    public function show(BloodRequest $bloodRequest): JsonResponse
+    private function distributeRequestToUsers(BloodRequest $bloodRequest): void
     {
+        $requestSource = $bloodRequest->request_source;
+        $usersToNotify = collect();
+
+        // Get users based on request source
+        if ($requestSource === 'donors' || $requestSource === 'both') {
+            $usersToNotify = $usersToNotify->merge(User::where('role', 'donor')->get());
+        }
+
+        if ($requestSource === 'blood_banks' || $requestSource === 'both') {
+            $usersToNotify = $usersToNotify->merge(User::where('role', 'blood_banks')->get());
+        }
+
+        // Create user_request entries for each user
+        foreach ($usersToNotify as $user) {
+            UserRequest::create([
+                'blood_request_id' => $bloodRequest->id,
+                'user_id' => $user->id,
+                'request_source' => $requestSource,
+                'is_read' => false,
+            ]);
+        }
+
+        // Send notifications
+        if ($usersToNotify->count() > 0) {
+            Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
+        }
+    }
+
+    /**
+     * Display the specified blood request and mark as read for authenticated user.
+     */
+    public function show(Request $request, BloodRequest $bloodRequest): JsonResponse
+    {
+        // Mark request as read for the authenticated user
+        if ($request->user()) {
+            $userRequest = UserRequest::where('blood_request_id', $bloodRequest->id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if ($userRequest) {
+                $userRequest->markAsRead();
+            }
+        }
+
         return response()->json([
-            'request' => $bloodRequest->load(['organization', 'delivery.rider.user']),
+            'request' => $bloodRequest->load(['organization', 'delivery.rider.user', 'userRequests']),
         ]);
     }
 
@@ -168,4 +217,79 @@ class BloodRequestController extends Controller
             'request' => $bloodRequest->fresh(),
         ]);
     }
+
+    /**
+     * Get all blood requests for the authenticated user.
+     */
+    public function myRequests(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $query = UserRequest::with(['bloodRequest.organization', 'bloodRequest.delivery'])
+            ->where('user_id', $user->id);
+
+        // Filter by read status
+        if ($request->has('is_read')) {
+            $isRead = filter_var($request->get('is_read'), FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_read', $isRead);
+        }
+
+        // Filter by request source
+        if ($request->has('request_source')) {
+            $query->where('request_source', $request->get('request_source'));
+        }
+
+        // Filter by request status
+        if ($request->has('status')) {
+            $query->whereHas('bloodRequest', function ($q) {
+                $q->where('status', request()->get('status'));
+            });
+        }
+
+        $userRequests = $query->latest()->paginate($request->get('per_page', 15));
+
+        return response()->json($userRequests);
+    }
+
+    /**
+     * Mark a specific user request as read.
+     */
+    public function markAsRead(Request $request, UserRequest $userRequest): JsonResponse
+    {
+        // Check if the user owns this request
+        if ($userRequest->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $userRequest->markAsRead();
+
+        return response()->json([
+            'message' => 'Request marked as read',
+            'user_request' => $userRequest->load('bloodRequest'),
+        ]);
+    }
+
+    /**
+     * Get request statistics for authenticated user.
+     */
+    public function requestStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $stats = [
+            'total_requests' => UserRequest::where('user_id', $user->id)->count(),
+            'unread_requests' => UserRequest::where('user_id', $user->id)->where('is_read', false)->count(),
+            'read_requests' => UserRequest::where('user_id', $user->id)->where('is_read', true)->count(),
+            'by_source' => [
+                'donors' => UserRequest::where('user_id', $user->id)->where('request_source', 'donors')->count(),
+                'blood_banks' => UserRequest::where('user_id', $user->id)->where('request_source', 'blood_banks')->count(),
+                'both' => UserRequest::where('user_id', $user->id)->where('request_source', 'both')->count(),
+            ],
+        ];
+
+        return response()->json($stats);
+    }
 }
+

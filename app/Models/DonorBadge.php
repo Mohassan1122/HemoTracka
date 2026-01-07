@@ -28,6 +28,10 @@ class DonorBadge extends Model
         'criteria_value' => 'integer',
     ];
 
+    protected $appends = [
+        'icon_url',
+    ];
+
     /**
      * Get the donors who have earned this badge.
      */
@@ -58,5 +62,13 @@ class DonorBadge extends Model
             'blood_type_rare' => in_array($donor->blood_group, ['AB-', 'B-', 'O-']),
             default => false,
         };
+    }
+
+    /**
+     * Get the badge icon URL for API responses.
+     */
+    public function getIconUrlAttribute(): ?string
+    {
+        return $this->icon ? asset('storage/' . $this->icon) : null;
     }
 }
