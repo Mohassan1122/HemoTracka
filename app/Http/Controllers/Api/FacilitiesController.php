@@ -414,7 +414,25 @@ class FacilitiesController extends Controller
 
         return response()->json([
             'message' => 'Organization profile updated successfully',
-            'organization' => $organization,
+            'data' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'type' => $organization->type,
+                'email' => $organization->contact_email,
+                'phone' => $organization->phone,
+                'address' => $organization->address,
+                'logo_url' => $organization->logo_url,
+                'cover_photo_url' => $organization->cover_photo_url,
+                'description' => $organization->description,
+                'services' => $organization->services,
+                'operating_hours' => $organization->operating_hours,
+                'facebook_link' => $organization->facebook_link,
+                'twitter_link' => $organization->twitter_link,
+                'instagram_link' => $organization->instagram_link,
+                'linkedin_link' => $organization->linkedin_link,
+                'latitude' => $organization->latitude,
+                'longitude' => $organization->longitude,
+            ]
         ]);
     }
 

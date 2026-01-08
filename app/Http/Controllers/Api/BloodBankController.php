@@ -269,9 +269,50 @@ class BloodBankController extends Controller
             ]);
 
             $org->update($validated);
-            return response()->json(['message' => 'Settings updated', 'organization' => $org]);
+            return response()->json([
+                'message' => 'Settings updated',
+                'data' => [
+                    'id' => $org->id,
+                    'name' => $org->name,
+                    'email' => $org->email,
+                    'phone' => $org->phone,
+                    'type' => $org->type,
+                    'license_number' => $org->license_number,
+                    'address' => $org->address,
+                    'status' => $org->status,
+                    'logo_url' => $org->logo_url,
+                    'cover_photo_url' => $org->cover_photo_url,
+                    'receive_notifications' => $org->receive_notifications ?? false,
+                    'show_inventory' => $org->show_inventory ?? false,
+                    'show_contact' => $org->show_contact ?? false,
+                    'facebook_link' => $org->facebook_link,
+                    'twitter_link' => $org->twitter_link,
+                    'instagram_link' => $org->instagram_link,
+                    'linkedin_link' => $org->linkedin_link,
+                ]
+            ]);
         }
 
-        return response()->json(['organization' => $org]);
+        return response()->json([
+            'data' => [
+                'id' => $org->id,
+                'name' => $org->name,
+                'email' => $org->email,
+                'phone' => $org->phone,
+                'type' => $org->type,
+                'license_number' => $org->license_number,
+                'address' => $org->address,
+                'status' => $org->status,
+                'logo_url' => $org->logo_url,
+                'cover_photo_url' => $org->cover_photo_url,
+                'receive_notifications' => $org->receive_notifications ?? false,
+                'show_inventory' => $org->show_inventory ?? false,
+                'show_contact' => $org->show_contact ?? false,
+                'facebook_link' => $org->facebook_link,
+                'twitter_link' => $org->twitter_link,
+                'instagram_link' => $org->instagram_link,
+                'linkedin_link' => $org->linkedin_link,
+            ]
+        ]);
     }
 }
