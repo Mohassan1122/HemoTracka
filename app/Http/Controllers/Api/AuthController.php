@@ -98,6 +98,7 @@ class AuthController extends Controller
             'id' => $org->id,
             'name' => $org->name,
             'type' => $org->type,
+            'role' => $org->role ?? ($org->type === 'Hospital' ? 'facilities' : 'blood_banks'),
             'email' => $org->contact_email,
             'phone' => $org->phone,
             'address' => $org->address,
@@ -277,10 +278,11 @@ class AuthController extends Controller
             // Organization exists, check password
             if (Hash::check($validated['password'], $org->password)) {
                 $token = $org->createToken('auth_token')->plainTextToken;
+                $orgProfile = $this->buildOrganizationProfile($org);
                 return response()->json([
                     'message' => 'Login successful',
-                    'organization' => $this->buildOrganizationProfile($org),
-                    'role' => $org->type === 'Hospital' ? 'facilities' : 'blood_banks', // Helper for frontend
+                    'user' => $orgProfile,
+                    'role' => $orgProfile['role'],
                     'token' => $token,
                     'token_type' => 'Bearer',
                 ]);
@@ -318,13 +320,17 @@ class AuthController extends Controller
         $authenticatedModel = $request->user();
 
         if ($authenticatedModel instanceof \App\Models\Organization) {
+            $orgProfile = $this->buildOrganizationProfile($authenticatedModel);
             return response()->json([
-                'organization' => $this->buildOrganizationProfile($authenticatedModel),
+                'user' => $orgProfile,
+                'role' => $orgProfile['role'],
             ]);
         }
 
+        $userProfile = $this->buildUserProfile($authenticatedModel);
         return response()->json([
-            'user' => $this->buildUserProfile($authenticatedModel),
+            'user' => $userProfile,
+            'role' => $userProfile['role'],
         ]);
     }
 

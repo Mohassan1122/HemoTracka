@@ -418,6 +418,7 @@ class FacilitiesController extends Controller
                 'id' => $organization->id,
                 'name' => $organization->name,
                 'type' => $organization->type,
+                'role' => $organization->role ?? 'facilities',
                 'email' => $organization->contact_email,
                 'phone' => $organization->phone,
                 'address' => $organization->address,
