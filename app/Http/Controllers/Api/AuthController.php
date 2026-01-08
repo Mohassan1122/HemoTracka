@@ -16,6 +16,80 @@ use Illuminate\Support\Facades\Mail;
 class AuthController extends Controller
 {
     /**
+     * Build a structured user profile response.
+     */
+    private function buildUserProfile(User $user): array
+    {
+        $profileData = [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => $user->role,
+            'profile_picture' => $user->profile_picture,
+            'profile_picture_url' => $user->profile_picture_url,
+            'date_of_birth' => $user->date_of_birth,
+            'gender' => $user->gender,
+            'email_verified_at' => $user->email_verified_at,
+        ];
+
+        // Add organization data if user has one
+        if ($user->organization_id) {
+            $user->load('organization');
+            $org = $user->organization;
+            if ($org) {
+                $profileData['organization'] = [
+                    'id' => $org->id,
+                    'name' => $org->name,
+                    'type' => $org->type,
+                    'email' => $org->contact_email,
+                    'phone' => $org->phone,
+                    'address' => $org->address,
+                    'license_number' => $org->license_number,
+                    'status' => $org->status,
+                    'logo_url' => $org->logo_url,
+                    'cover_photo_url' => $org->cover_photo_url,
+                ];
+            }
+        }
+
+        // Add donor data if user is a donor
+        if ($user->role === 'donor') {
+            $user->load('donor');
+            $donor = $user->donor;
+            if ($donor) {
+                $profileData['donor'] = [
+                    'id' => $donor->id,
+                    'blood_group' => $donor->blood_group,
+                    'genotype' => $donor->genotype,
+                    'height' => $donor->height,
+                    'address' => $donor->address,
+                    'total_donations' => $donor->total_units_donated,
+                    'next_eligible_date' => $donor->next_eligible_date,
+                    'is_active' => $donor->is_active,
+                ];
+            }
+        }
+
+        // Add rider data if user is a rider
+        if ($user->role === 'rider') {
+            $user->load('rider');
+            $rider = $user->rider;
+            if ($rider) {
+                $profileData['rider'] = [
+                    'id' => $rider->id,
+                    'license_number' => $rider->license_number,
+                    'vehicle_type' => $rider->vehicle_type,
+                    'is_available' => $rider->is_available,
+                ];
+            }
+        }
+
+        return $profileData;
+    }
+
+    /**
      * Register a new user or organization.
      */
     public function register(Request $request): JsonResponse
@@ -159,7 +233,7 @@ class AuthController extends Controller
                 $token = $user->createToken('auth_token')->plainTextToken;
                 return response()->json([
                     'message' => 'Login successful',
-                    'user' => $user->load(['organization', 'donor']),
+                    'user' => $this->buildUserProfile($user),
                     'token' => $token,
                     'token_type' => 'Bearer',
                 ]);
@@ -216,7 +290,7 @@ class AuthController extends Controller
     public function profile(Request $request): JsonResponse
     {
         return response()->json([
-            'user' => $request->user()->load(['organization', 'donor', 'rider']),
+            'user' => $this->buildUserProfile($request->user()),
         ]);
     }
 
@@ -286,7 +360,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'user' => $user->fresh()->load(['organization', 'donor', 'rider']),
+            'user' => $this->buildUserProfile($user->fresh()),
         ]);
     }
 
