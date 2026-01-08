@@ -18,6 +18,7 @@ class Organization extends Model implements Authenticatable
     protected $fillable = [
         'name',
         'type',
+        'role',
         'license_number',
         'address',
         'contact_email',
