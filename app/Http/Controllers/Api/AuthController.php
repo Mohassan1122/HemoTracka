@@ -90,6 +90,32 @@ class AuthController extends Controller
     }
 
     /**
+     * Build a structured organization profile response.
+     */
+    private function buildOrganizationProfile(\App\Models\Organization $org): array
+    {
+        return [
+            'id' => $org->id,
+            'name' => $org->name,
+            'type' => $org->type,
+            'email' => $org->contact_email,
+            'phone' => $org->phone,
+            'address' => $org->address,
+            'license_number' => $org->license_number,
+            'status' => $org->status,
+            'logo_url' => $org->logo_url,
+            'cover_photo_url' => $org->cover_photo_url,
+            'description' => $org->description,
+            'services' => $org->services,
+            'operating_hours' => $org->operating_hours,
+            'facebook_link' => $org->facebook_link,
+            'twitter_link' => $org->twitter_link,
+            'instagram_link' => $org->instagram_link,
+            'linkedin_link' => $org->linkedin_link,
+        ];
+    }
+
+    /**
      * Register a new user or organization.
      */
     public function register(Request $request): JsonResponse
@@ -253,7 +279,7 @@ class AuthController extends Controller
                 $token = $org->createToken('auth_token')->plainTextToken;
                 return response()->json([
                     'message' => 'Login successful',
-                    'user' => $org,
+                    'organization' => $this->buildOrganizationProfile($org),
                     'role' => $org->type === 'Hospital' ? 'facilities' : 'blood_banks', // Helper for frontend
                     'token' => $token,
                     'token_type' => 'Bearer',
