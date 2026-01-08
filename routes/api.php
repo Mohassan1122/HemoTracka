@@ -252,6 +252,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/requests/{id}/confirm-delivery', [BloodBankController::class, 'confirmDelivery']);
         Route::put('/deliveries/{id}/status', [BloodBankController::class, 'updateDeliveryStatus']);
         Route::match(['get', 'put'], '/settings', [BloodBankController::class, 'settings']);
+        Route::put('/profile', [BloodBankController::class, 'updateProfile']);
 
         // Inventory management
         Route::get('/inventory/summary', [InventoryController::class, 'summary']);

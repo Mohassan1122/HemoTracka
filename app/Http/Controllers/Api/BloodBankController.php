@@ -315,4 +315,87 @@ class BloodBankController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Update blood bank profile.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'blood_banks') {
+            return response()->json([
+                'message' => 'Access denied. This endpoint is for blood banks only.',
+            ], 403);
+        }
+
+        $organization = $user->organization;
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'contact_email' => ['sometimes', 'email', 'max:255'],
+            'phone' => ['sometimes', 'string', 'max:20'],
+            'address' => ['sometimes', 'string'],
+            'operating_hours' => ['sometimes', 'array'],
+            'description' => ['sometimes', 'string'],
+            'services' => ['sometimes', 'array'],
+            'facebook_link' => ['sometimes', 'string', 'url'],
+            'twitter_link' => ['sometimes', 'string', 'url'],
+            'instagram_link' => ['sometimes', 'string', 'url'],
+            'linkedin_link' => ['sometimes', 'string', 'url'],
+            'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
+            'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
+            'logo' => ['sometimes', 'image', 'max:2048'],
+            'cover_photo' => ['sometimes', 'image', 'max:5120'],
+        ]);
+
+        // Handle logo upload if provided
+        if ($request->hasFile('logo')) {
+            $image = $request->file('logo');
+            $filename = time() . '_logo_' . $image->getClientOriginalName();
+            $path = $image->storeAs('organization_logos', $filename, 'public');
+            $validated['logo'] = $path;
+        }
+
+        // Handle cover photo upload if provided
+        if ($request->hasFile('cover_photo')) {
+            $image = $request->file('cover_photo');
+            $filename = time() . '_cover_' . $image->getClientOriginalName();
+            $path = $image->storeAs('organization_covers', $filename, 'public');
+            $validated['cover_photo'] = $path;
+        }
+
+        // Prepare update data excluding file fields if they weren't provided
+        $updateData = [];
+        foreach ($validated as $key => $value) {
+            if (!in_array($key, ['logo', 'cover_photo']) || $value !== null) {
+                $updateData[$key] = $value;
+            }
+        }
+
+        $organization->update($updateData);
+
+        return response()->json([
+            'message' => 'Blood bank profile updated successfully',
+            'data' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'type' => $organization->type,
+                'email' => $organization->contact_email,
+                'phone' => $organization->phone,
+                'address' => $organization->address,
+                'logo_url' => $organization->logo_url,
+                'cover_photo_url' => $organization->cover_photo_url,
+                'description' => $organization->description,
+                'services' => $organization->services,
+                'operating_hours' => $organization->operating_hours,
+                'facebook_link' => $organization->facebook_link,
+                'twitter_link' => $organization->twitter_link,
+                'instagram_link' => $organization->instagram_link,
+                'linkedin_link' => $organization->linkedin_link,
+                'latitude' => $organization->latitude,
+                'longitude' => $organization->longitude,
+            ]
+        ]);
+    }
 }
