@@ -315,8 +315,16 @@ class AuthController extends Controller
      */
     public function profile(Request $request): JsonResponse
     {
+        $authenticatedModel = $request->user();
+
+        if ($authenticatedModel instanceof \App\Models\Organization) {
+            return response()->json([
+                'organization' => $this->buildOrganizationProfile($authenticatedModel),
+            ]);
+        }
+
         return response()->json([
-            'user' => $this->buildUserProfile($request->user()),
+            'user' => $this->buildUserProfile($authenticatedModel),
         ]);
     }
 
@@ -325,7 +333,16 @@ class AuthController extends Controller
      */
     public function updateProfile(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $authenticatedModel = $request->user();
+
+        // Check if authenticated model is Organization
+        if ($authenticatedModel instanceof \App\Models\Organization) {
+            return response()->json([
+                'message' => 'Organization profile updates should use the organization endpoints',
+            ], 400);
+        }
+
+        $user = $authenticatedModel;
 
         // Prepare validation rules
         $rules = [
