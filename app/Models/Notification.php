@@ -4,8 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\DatabaseNotification;
 
-class Notification extends Model
+class Notification extends DatabaseNotification
 {
     use HasFactory;
+
+    protected $table = 'notifications';
+
+    protected $casts = [
+        'data' => 'array',
+        'read_at' => 'datetime',
+    ];
 }
