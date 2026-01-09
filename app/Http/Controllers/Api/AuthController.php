@@ -113,6 +113,8 @@ class AuthController extends Controller
             'twitter_link' => $org->twitter_link,
             'instagram_link' => $org->instagram_link,
             'linkedin_link' => $org->linkedin_link,
+            'latitude' => $org->latitude,
+            'longitude' => $org->longitude,
         ];
     }
 
