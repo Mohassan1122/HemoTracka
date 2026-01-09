@@ -48,10 +48,8 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Run migrations if needed
-if [ "$RUN_MIGRATIONS" = "true" ]; then
-    php artisan migrate --force
-fi
+# Run migrations
+php artisan migrate --force
 
 # Start Apache
 exec apache2-foreground
