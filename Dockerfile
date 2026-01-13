@@ -1,10 +1,9 @@
-# Use PHP-FPM with Apache (Render compatible)
-FROM php:8.2-fpm
+# Use PHP 8.2 Apache image (more stable for production)
+FROM php:8.2-apache
 
-# Install system dependencies and PHP extensions
+# Install required PHP extensions and dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        apache2 \
         libpng-dev \
         libjpeg-dev \
         libfreetype6-dev \
@@ -15,33 +14,23 @@ RUN apt-get update \
         libpq-dev \
         git \
         unzip \
-        supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd intl pdo_pgsql zip mbstring xml bcmath \
+    && docker-php-ext-install -j$(nproc) gd intl pdo_pgsql pgsql pdo pdo_mysql zip mbstring xml bcmath \
+    && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache modules
-RUN a2enmod rewrite headers proxy proxy_fcgi setenvif
+# Set Apache document root
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
-# Configure Apache VirtualHost
-RUN echo '<VirtualHost *:80>\n\
-    DocumentRoot /var/www/html/public\n\
-    <Directory /var/www/html/public>\n\
-        AllowOverride All\n\
-        Require all granted\n\
-    </Directory>\n\
-    <FilesMatch \\.php$>\n\
-        SetHandler "proxy:fcgi://127.0.0.1:9000"\n\
-    </FilesMatch>\n\
-    ErrorLog ${APACHE_LOG_DIR}/error.log\n\
-    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
-</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Configure Apache
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Copy application code
 COPY . /var/www/html
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
@@ -50,27 +39,14 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Create supervisor config
-RUN echo '[supervisord]\n\
-nodaemon=true\n\
-user=root\n\
-\n\
-[program:php-fpm]\n\
-command=php-fpm\n\
-autostart=true\n\
-autorestart=true\n\
-\n\
-[program:apache2]\n\
-command=apache2-foreground\n\
-autostart=true\n\
-autorestart=true\n\
-' > /etc/supervisor/conf.d/supervisord.conf
+# Copy and set up entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose port
 EXPOSE 80
 
-# Start supervisor (manages both PHP-FPM and Apache)
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Use entrypoint script
+ENTRYPOINT ["docker-entrypoint.sh"]
