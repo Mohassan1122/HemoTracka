@@ -30,9 +30,15 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('blood_requests', function (Blueprint $table) {
-            $table->dropColumnIfExists('genotype');
-            $table->dropColumnIfExists('min_units_bank_can_send');
-            $table->dropColumnIfExists('is_emergency');
+            if (Schema::hasColumn('blood_requests', 'genotype')) {
+                $table->dropColumn('genotype');
+            }
+            if (Schema::hasColumn('blood_requests', 'min_units_bank_can_send')) {
+                $table->dropColumn('min_units_bank_can_send');
+            }
+            if (Schema::hasColumn('blood_requests', 'is_emergency')) {
+                $table->dropColumn('is_emergency');
+            }
         });
     }
 };
