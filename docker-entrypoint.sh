@@ -51,5 +51,5 @@ php artisan view:cache
 # Run migrations
 php artisan migrate --force
 
-# Start Apache
-exec apache2-foreground
+# Start supervisor (manages both PHP-FPM and Apache)
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
