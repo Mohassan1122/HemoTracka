@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\State;
+use App\Models\Organization;
 use App\Models\RegulatoryBody;
 use App\Models\ComplianceRequest;
 use App\Models\ComplianceMonitoring;
@@ -39,7 +40,7 @@ class RegulatoryBodySeeder extends Seeder
                 'role' => 'regulatory_body',
                 'institution_name' => 'Federal Drug Administration - Nigeria',
                 'license_number' => 'FDA-NG-2025-001',
-                'level' => 'Federal',
+                'level' => 'federal',
                 'state' => $lagosState,
                 'address' => 'Oshodi, Lagos',
                 'phone_number' => '09012345001',
@@ -53,7 +54,7 @@ class RegulatoryBodySeeder extends Seeder
                 'role' => 'regulatory_body',
                 'institution_name' => 'National Blood Transfusion Service - Abuja',
                 'license_number' => 'NBTS-ABJ-2025-001',
-                'level' => 'National',
+                'level' => 'federal',
                 'state' => $abujaState,
                 'address' => 'Asokoro, Abuja',
                 'phone_number' => '09012345002',
@@ -67,7 +68,7 @@ class RegulatoryBodySeeder extends Seeder
                 'role' => 'regulatory_body',
                 'institution_name' => 'Kano State Health Services Board',
                 'license_number' => 'KSHSB-2025-001',
-                'level' => 'State',
+                'level' => 'state',
                 'state' => $kanosState,
                 'address' => 'Kofar Mata, Kano',
                 'phone_number' => '09012345003',
@@ -145,12 +146,16 @@ class RegulatoryBodySeeder extends Seeder
             }
 
             // 3. Create Compliance Monitoring Records for each regulatory body
+            $bloodBanks = Organization::where('type', 'Blood Bank')->get();
+            $randomOrg = $bloodBanks->random();
+
             ComplianceMonitoring::updateOrCreate(
                 [
                     'regulatory_body_id' => $regulatoryBody->id,
                     'inspection_id' => 'INS-' . $regulatoryBody->license_number . '-001',
                 ],
                 [
+                    'organization_id' => $randomOrg->id,
                     'facility_type' => 'Blood Bank',
                     'compliance_status' => ['Compliant', 'Non-Compliant', 'Partially Compliant'][array_rand(['Compliant', 'Non-Compliant', 'Partially Compliant'])],
                     'last_inspection_date' => now()->subMonths(rand(1, 6)),
@@ -164,6 +169,8 @@ class RegulatoryBodySeeder extends Seeder
             for ($i = 0; $i < 3; $i++) {
                 ComplianceRequest::create([
                     'regulatory_body_id' => $regulatoryBody->id,
+                    'organization_id' => $randomOrg->id,
+                    'organization_type' => 'blood_bank',
                     'request_type' => ['License Renewal', 'Inspection Request', 'Compliance Verification'][array_rand(['License Renewal', 'Inspection Request', 'Compliance Verification'])],
                     'description' => 'Compliance request #' . ($i + 1) . ' for ' . $rbData['institution_name'],
                     'priority' => ['Low', 'Medium', 'High', 'Urgent'][array_rand(['Low', 'Medium', 'High', 'Urgent'])],

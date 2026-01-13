@@ -16,6 +16,7 @@ class RegulatoryBodySocialConnection extends Model
         'regulatory_body_id',
         'platform',
         'handle',
+        'url',
         'is_verified',
     ];
 

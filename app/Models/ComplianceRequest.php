@@ -16,8 +16,12 @@ class ComplianceRequest extends Model
         'regulatory_body_id',
         'organization_id',
         'organization_type',
+        'request_type',
+        'description',
+        'priority',
         'status',
-        'requested_at',
+        'submission_date',
+        'required_documents',
         'approved_at',
         'rejection_reason',
         'reviewed_by_id',
@@ -25,8 +29,9 @@ class ComplianceRequest extends Model
     ];
 
     protected $casts = [
-        'requested_at' => 'datetime',
+        'submission_date' => 'datetime',
         'approved_at' => 'datetime',
+        'required_documents' => 'array',
     ];
 
     /**

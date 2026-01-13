@@ -15,11 +15,13 @@ class ComplianceMonitoring extends Model
     protected $fillable = [
         'regulatory_body_id',
         'organization_id',
-        'compliance_score',
+        'inspection_id',
+        'facility_type',
+        'compliance_status',
         'last_inspection_date',
         'next_inspection_date',
-        'violations_count',
-        'remarks',
+        'violations_found',
+        'notes',
     ];
 
     protected $casts = [

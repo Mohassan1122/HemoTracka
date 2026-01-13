@@ -18,7 +18,7 @@ return new class extends Migration {
         // Optional: add a PostgreSQL CHECK constraint to restrict role values without ENUMs
         // This is safe to run in PostgreSQL; on other DBs it will be ignored if not supported
         try {
-            DB::statement("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin','donor','rider','facilities','blood_banks'))");
+            DB::statement("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin','donor','rider','facilities','blood_banks','regulatory_body'))");
         } catch (\Throwable $e) {
             // Ignore if the DB doesn't support adding this constraint this way
         }

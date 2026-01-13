@@ -135,7 +135,7 @@ class AuthController extends Controller
     private function registerUser(Request $request): JsonResponse
     {
         $role = $request->input('role', 'donor');
-        
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
@@ -189,7 +189,7 @@ class AuthController extends Controller
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'Eligible', // Default status
             ];
-            
+
             \App\Models\Donor::create($donorData);
         }
 
@@ -229,6 +229,7 @@ class AuthController extends Controller
             'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
             'type' => $validated['type'],
+            'role' => $validated['type'] === 'Hospital' ? 'facilities' : 'blood_banks',
             'status' => 'Pending',
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
@@ -390,8 +391,12 @@ class AuthController extends Controller
         // Update user table
         $user->update(array_filter($validated, function ($key) {
             return in_array($key, [
-                'first_name', 'last_name', 'phone', 'date_of_birth', 
-                'gender', 'profile_picture'
+                'first_name',
+                'last_name',
+                'phone',
+                'date_of_birth',
+                'gender',
+                'profile_picture'
             ]);
         }, ARRAY_FILTER_USE_KEY));
 
@@ -399,11 +404,18 @@ class AuthController extends Controller
         if ($user->role === 'donor' && $user->donor) {
             $donorUpdates = array_filter($validated, function ($key) {
                 return in_array($key, [
-                    'first_name', 'last_name', 'blood_group', 'genotype', 
-                    'height', 'date_of_birth', 'address', 'phone', 'notes'
+                    'first_name',
+                    'last_name',
+                    'blood_group',
+                    'genotype',
+                    'height',
+                    'date_of_birth',
+                    'address',
+                    'phone',
+                    'notes'
                 ]);
             }, ARRAY_FILTER_USE_KEY);
-            
+
             if (!empty($donorUpdates)) {
                 $user->donor->update($donorUpdates);
             }

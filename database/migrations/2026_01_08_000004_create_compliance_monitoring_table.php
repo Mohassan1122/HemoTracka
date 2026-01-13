@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -16,10 +15,13 @@ return new class extends Migration
             $table->unsignedBigInteger('regulatory_body_id');
             $table->unsignedBigInteger('organization_id');
             $table->integer('compliance_score')->default(100);
+            $table->string('inspection_id')->unique();
+            $table->string('facility_type');
+            $table->string('compliance_status');
             $table->timestamp('last_inspection_date')->nullable();
             $table->timestamp('next_inspection_date')->nullable();
-            $table->integer('violations_count')->default(0);
-            $table->text('remarks')->nullable();
+            $table->integer('violations_found')->default(0);
+            $table->text('notes')->nullable();
             $table->timestamps();
 
             // Foreign keys

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -16,8 +15,12 @@ return new class extends Migration
             $table->unsignedBigInteger('regulatory_body_id');
             $table->unsignedBigInteger('organization_id');
             $table->enum('organization_type', ['blood_bank', 'health_facility']);
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->timestamp('requested_at')->useCurrent();
+            $table->string('request_type');
+            $table->text('description')->nullable();
+            $table->string('priority')->default('Medium');
+            $table->enum('status', ['Pending', 'In Review', 'Approved', 'Rejected'])->default('Pending');
+            $table->timestamp('submission_date')->useCurrent();
+            $table->json('required_documents')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->text('rejection_reason')->nullable();
             $table->unsignedBigInteger('reviewed_by_id')->nullable();
@@ -33,7 +36,7 @@ return new class extends Migration
             $table->index('status');
             $table->index('organization_id');
             $table->index('regulatory_body_id');
-            $table->index('requested_at');
+            $table->index('submission_date');
         });
     }
 

@@ -43,6 +43,7 @@ class AdminSeeder extends Seeder
             $org = Organization::updateOrCreate(
                 ['license_number' => 'LIC-ADMIN-' . strtoupper(str_replace(' ', '-', $orgData['name']))],
                 array_merge($orgData, [
+                    'role' => $orgData['type'] === 'Hospital' ? 'facilities' : 'blood_banks',
                     'address' => 'Admin Seed Location',
                     'contact_email' => 'contact@' . strtolower(str_replace(' ', '', $orgData['name'])) . '.com',
                     'email' => 'contact@' . strtolower(str_replace(' ', '', $orgData['name'])) . '.com', // Auth email

@@ -28,6 +28,7 @@ class BloodBankSeeder extends Seeder
                 [
                     'name' => 'Central Blood Bank Port Harcourt',
                     'type' => 'Blood Bank',
+                    'role' => 'blood_banks',
                     'address' => 'No 15 Aggrey Road, Port Harcourt',
                     'contact_email' => 'info@phbloodbank.com',
                     'email' => 'admin@phbloodbank.com', // Auth email
@@ -49,6 +50,7 @@ class BloodBankSeeder extends Seeder
                 [
                     'name' => 'BMH Hospital',
                     'type' => 'Hospital',
+                    'role' => 'facilities',
                     'address' => 'BMH Road, Port Harcourt',
                     'contact_email' => 'admin@bmh.com',
                     'email' => 'admin@bmh.com',
@@ -123,7 +125,7 @@ class BloodBankSeeder extends Seeder
                     'units_needed' => 10,
                     'hospital_unit' => 'Emergency',
                     'source_type' => 'Hospital',
-                    'type' => 'Routine',
+                    'type' => 'Blood',
                     'urgency_level' => 'Normal',
                     'needed_by' => now()->addHours(2),
                     'status' => 'Pending',

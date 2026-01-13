@@ -22,6 +22,7 @@ class FacilitiesSeeder extends Seeder
             [
                 'name' => 'Kuje National Hospital',
                 'type' => 'Hospital',
+                'role' => 'facilities',
                 'contact_email' => 'contact@kujehospital.gov.ng',
                 'email' => 'admin@kujehospital.gov.ng',
                 'password' => Hash::make('password'),
@@ -41,6 +42,7 @@ class FacilitiesSeeder extends Seeder
             [
                 'name' => 'Central Blood Bank Abuja',
                 'type' => 'Blood Bank',
+                'role' => 'blood_banks',
                 'contact_email' => 'info@centralbloodbank.org',
                 'email' => 'info@centralbloodbank.org',
                 'password' => Hash::make('password'),
@@ -77,7 +79,7 @@ class FacilitiesSeeder extends Seeder
                 'units_needed' => rand(1, 10),
                 'patient_name' => 'Patient ' . rand(100, 999),
                 'hospital_unit' => ['ICU', 'Emergency', 'Ward A', 'Ward B', 'Surgery'][array_rand(['ICU', 'Emergency', 'Ward A', 'Ward B', 'Surgery'])],
-                'type' => ['Emergent', 'Bulk', 'Routine'][array_rand(['Emergent', 'Bulk', 'Routine'])],
+                'type' => ['Blood', 'Platelets', 'Bone Marrow'][array_rand(['Blood', 'Platelets', 'Bone Marrow'])],
                 'urgency_level' => ['Critical', 'High', 'Normal'][array_rand(['Critical', 'High', 'Normal'])],
                 'status' => ['Pending', 'Approved', 'Completed', 'Cancelled'][array_rand(['Pending', 'Approved', 'Completed', 'Cancelled'])],
                 'needed_by' => now()->addHours(rand(1, 48)),

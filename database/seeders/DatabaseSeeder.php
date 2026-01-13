@@ -20,9 +20,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             StateSeeder::class,
             AdminSeeder::class,
-            RegulatoryBodySeeder::class,
             FacilitiesSeeder::class,
             BloodBankSeeder::class,
+            RegulatoryBodySeeder::class,
             DonorBadgeSeeder::class,
             DetailedSeeder::class,
         ]);

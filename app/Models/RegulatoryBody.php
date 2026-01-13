@@ -34,6 +34,8 @@ class RegulatoryBody extends Model
     protected $casts = [
         'notification_preferences' => 'array',
         'is_active' => 'boolean',
+        'work_days' => 'array',
+        'work_hours' => 'array',
     ];
 
     /**
