@@ -458,4 +458,31 @@ class FacilitiesController extends Controller
             'format' => 'CSV',
         ]);
     }
+
+    /**
+     * Get all facilities (Hospitals and Blood Banks).
+     * Accessible to authenticated users.
+     */
+    public function getAllFacilities(Request $request): JsonResponse
+    {
+        $query = Organization::whereIn('type', ['Hospital', 'Blood Bank'])
+            ->where('status', 'Active');
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $facilities = $query->latest()->paginate($request->get('per_page', 15));
+
+        return response()->json($facilities);
+    }
 }

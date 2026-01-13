@@ -75,50 +75,50 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/profile', [RegulatoryBodyProfileController::class, 'updateProfile']);
         Route::post('/profile/profile-picture', [RegulatoryBodyProfileController::class, 'uploadProfilePicture']);
         Route::post('/profile/cover-picture', [RegulatoryBodyProfileController::class, 'uploadCoverPicture']);
-        
+
         // Social Connections (PAGE 2)
         Route::post('/social-connections', [RegulatoryBodyProfileController::class, 'addSocialConnection']);
         Route::put('/social-connections/{id}', [RegulatoryBodyProfileController::class, 'updateSocialConnection']);
         Route::delete('/social-connections/{id}', [RegulatoryBodyProfileController::class, 'deleteSocialConnection']);
-        
+
         // Dashboard (PAGE 3)
         Route::get('/dashboard/stats', [RegulatoryBodyDashboardController::class, 'getStats']);
         Route::get('/dashboard/inventory-chart', [RegulatoryBodyDashboardController::class, 'getInventoryChart']);
         Route::get('/dashboard/donation-trends', [RegulatoryBodyDashboardController::class, 'getDonationTrends']);
         Route::get('/dashboard/recent-donors', [RegulatoryBodyDashboardController::class, 'getRecentDonors']);
         Route::get('/dashboard/recent-requests', [RegulatoryBodyDashboardController::class, 'getRecentRequests']);
-        
+
         // Compliance Management (PAGE 4)
         Route::get('/compliance/status', [RegulatoryBodyComplianceController::class, 'getComplianceStatus']);
         Route::get('/compliance/donation-trends', [RegulatoryBodyComplianceController::class, 'getDonationTrends']);
         Route::get('/compliance/blood-demand-supply', [RegulatoryBodyComplianceController::class, 'getBloodDemandSupply']);
         Route::get('/compliance/filters/locations', [RegulatoryBodyComplianceController::class, 'getFilterLocations']);
         Route::get('/compliance/filters/blood-types', [RegulatoryBodyComplianceController::class, 'getFilterBloodTypes']);
-        
+
         // Blood Banks Directory (PAGE 5 & 6)
         Route::get('/blood-banks', [RegulatoryBodyBloodBanksController::class, 'index']);
         Route::get('/blood-banks/{id}', [RegulatoryBodyBloodBanksController::class, 'show']);
         Route::get('/blood-banks/{id}/inventory-chart', [RegulatoryBodyBloodBanksController::class, 'getInventoryChart']);
         Route::get('/blood-banks/{id}/blood-demand-supply', [RegulatoryBodyBloodBanksController::class, 'getBloodDemandSupply']);
         Route::get('/blood-banks/filter/statuses', [RegulatoryBodyBloodBanksController::class, 'getFilterStatuses']);
-        
+
         // Inventory Management (PAGE 7)
         Route::get('/inventory', [RegulatoryBodyInventoryController::class, 'index']);
         Route::get('/inventory/chart', [RegulatoryBodyInventoryController::class, 'getChart']);
         Route::get('/inventory/export', [RegulatoryBodyInventoryController::class, 'export']);
         Route::get('/inventory/stats', [RegulatoryBodyInventoryController::class, 'getStats']);
-        
+
         // Messages (PAGE 8)
         Route::get('/messages', [RegulatoryBodyMessagesController::class, 'getConversations']);
         Route::get('/messages/{conversationId}', [RegulatoryBodyMessagesController::class, 'getConversation']);
         Route::post('/messages', [RegulatoryBodyMessagesController::class, 'sendMessage']);
         Route::post('/messages/create-alert', [RegulatoryBodyMessagesController::class, 'createAlert']);
         Route::put('/messages/{id}/read', [RegulatoryBodyMessagesController::class, 'markAsRead']);
-        
+
         // Settings & Notifications (PAGE 9)
         Route::get('/notification-preferences', [RegulatoryBodySettingsController::class, 'getNotificationPreferences']);
         Route::put('/notification-preferences', [RegulatoryBodySettingsController::class, 'updateNotificationPreferences']);
-        
+
         // Logout
         Route::post('/logout', [RegulatoryBodyAuthController::class, 'logout']);
     });
@@ -204,6 +204,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 3. FACILITIES ROUTES (/facilities)
     // =========================================================================
     Route::prefix('facilities')->group(function () {
+        Route::get('/all', [FacilitiesController::class, 'getAllFacilities']);
         Route::get('/dashboard', [FacilitiesController::class, 'dashboard']);
         Route::get('/request-history', [FacilitiesController::class, 'requestHistory']);
         Route::get('/reports', [FacilitiesController::class, 'reportsOverview']);
