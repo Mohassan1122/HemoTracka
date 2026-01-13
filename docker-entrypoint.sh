@@ -51,5 +51,8 @@ php artisan view:cache
 # Run migrations
 php artisan migrate --force
 
+# Run seeders
+php artisan db:seed --force
+
 # Start supervisor (manages both PHP-FPM and Apache)
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
