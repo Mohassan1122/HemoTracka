@@ -89,40 +89,44 @@ class BloodRequestController extends Controller
     {
         $requestSource = $bloodRequest->request_source;
         $usersToNotify = collect();
+        $organizationsToNotify = collect();
 
-        // Get users based on request source
+        // Get donor users
         if ($requestSource === 'donors' || $requestSource === 'both') {
             $usersToNotify = $usersToNotify->merge(User::where('role', 'donor')->get());
         }
 
+        // Get blood bank organizations (blood banks are Organizations, not Users)
         if ($requestSource === 'blood_banks' || $requestSource === 'both') {
-            $usersToNotify = $usersToNotify->merge(User::where('role', 'blood_banks')->get());
+            $organizationsToNotify = $organizationsToNotify->merge(
+                \App\Models\Organization::where('role', 'blood_banks')
+                    ->where('status', 'Active')
+                    ->get()
+            );
         }
 
-        // Create user_request entries for each user
+        // Create user_request entries for users (donors)
         foreach ($usersToNotify as $user) {
-            UserRequest::create([
-                'blood_request_id' => $bloodRequest->id,
-                'user_id' => $user->id,
-                'request_source' => $requestSource,
-                'is_read' => false,
-            ]);
+            UserRequest::updateOrCreate(
+                [
+                    'blood_request_id' => $bloodRequest->id,
+                    'user_id' => $user->id,
+                ],
+                [
+                    'request_source' => $requestSource,
+                    'is_read' => false,
+                ]
+            );
         }
 
-        // Send notifications to Users
+        // Send notifications to Users (donors)
         if ($usersToNotify->count() > 0) {
             Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
         }
 
-        // Also notify Organizations (Blood Banks) directly
-        if ($requestSource === 'blood_banks' || $requestSource === 'both') {
-            $bloodBankOrganizations = \App\Models\Organization::where('type', 'Blood Bank')
-                ->where('status', 'Active')
-                ->get();
-
-            if ($bloodBankOrganizations->count() > 0) {
-                Notification::send($bloodBankOrganizations, new NewBloodRequestNotification($bloodRequest));
-            }
+        // Send notifications to Organizations (Blood Banks)
+        if ($organizationsToNotify->count() > 0) {
+            Notification::send($organizationsToNotify, new NewBloodRequestNotification($bloodRequest));
         }
     }
 
