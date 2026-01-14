@@ -460,20 +460,22 @@ class FacilitiesController extends Controller
     }
 
     /**
-     * Get all facilities (Hospitals and Blood Banks).
-     * Accessible to authenticated users.
+     * Get all facilities (Hospitals and Blood Banks) for map display.
+     * Optimized: Only returns facilities with valid coordinates.
+     * No pagination - returns all data for fast map rendering.
      */
     public function getAllFacilities(Request $request): JsonResponse
     {
         $query = Organization::whereIn('type', ['Hospital', 'Blood Bank'])
-            ->where('status', 'Active');
+            ->where('status', 'Active')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude');
 
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('address', 'like', "%{$search}%")
-                    ->orWhere('type', 'like', "%{$search}%");
+                    ->orWhere('address', 'like', "%{$search}%");
             });
         }
 
@@ -481,8 +483,13 @@ class FacilitiesController extends Controller
             $query->where('type', $request->type);
         }
 
-        $facilities = $query->latest()->paginate($request->get('per_page', 15));
+        // Return only essential map fields, no pagination
+        $facilities = $query->select(['id', 'name', 'address', 'longitude', 'latitude', 'type'])
+            ->get();
 
-        return response()->json($facilities);
+        return response()->json([
+            'data' => $facilities,
+            'total' => $facilities->count()
+        ]);
     }
 }
