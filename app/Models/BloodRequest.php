@@ -72,4 +72,9 @@ class BloodRequest extends Model
     {
         return $this->hasMany(UserRequest::class);
     }
+
+    public function organizationRequests(): HasMany
+    {
+        return $this->hasMany(OrganizationRequest::class);
+    }
 }

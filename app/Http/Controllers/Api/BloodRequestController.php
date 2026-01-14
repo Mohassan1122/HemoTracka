@@ -119,6 +119,20 @@ class BloodRequestController extends Controller
             );
         }
 
+        // Create organization_request entries for organizations (blood banks)
+        foreach ($organizationsToNotify as $organization) {
+            \App\Models\OrganizationRequest::updateOrCreate(
+                [
+                    'blood_request_id' => $bloodRequest->id,
+                    'organization_id' => $organization->id,
+                ],
+                [
+                    'request_source' => $requestSource,
+                    'is_read' => false,
+                ]
+            );
+        }
+
         // Send notifications to Users (donors)
         if ($usersToNotify->count() > 0) {
             Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
