@@ -32,11 +32,21 @@ class BloodRequest extends Model
         'card_charge',
         'total_amount',
         'notes',
+        'view_count',
     ];
 
     protected $casts = [
         'needed_by' => 'datetime',
+        'view_count' => 'integer',
     ];
+
+    /**
+     * Increment the view count for this blood request.
+     */
+    public function incrementViewCount(): void
+    {
+        $this->increment('view_count');
+    }
 
     public function organization(): BelongsTo
     {

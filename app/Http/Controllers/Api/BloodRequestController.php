@@ -59,7 +59,7 @@ class BloodRequestController extends Controller
             'blood_group' => ['required_if:type,Blood', 'nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
             'genotype' => ['nullable', 'string', 'max:50'],
             'units_needed' => ['required', 'integer', 'min:1'],
-            'min_units_bank_can_send' => ['required', 'integer', 'min:1'],
+            'min_units_bank_can_send' => ['nullable', 'integer', 'min:1'],
             'needed_by' => ['required', 'date'],
             'is_emergency' => ['boolean'],
             'notes' => ['nullable', 'string'],
@@ -109,10 +109,35 @@ class BloodRequestController extends Controller
             ]);
         }
 
-        // Send notifications
+        // Send notifications to Users
         if ($usersToNotify->count() > 0) {
             Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
         }
+
+        // Also notify Organizations (Blood Banks) directly
+        if ($requestSource === 'blood_banks' || $requestSource === 'both') {
+            $bloodBankOrganizations = \App\Models\Organization::where('type', 'Blood Bank')
+                ->where('status', 'Active')
+                ->get();
+
+            if ($bloodBankOrganizations->count() > 0) {
+                Notification::send($bloodBankOrganizations, new NewBloodRequestNotification($bloodRequest));
+            }
+        }
+    }
+
+    /**
+     * Record a view/read of a blood request.
+     * This increments the view_count for tracking purposes.
+     */
+    public function recordView(BloodRequest $bloodRequest): JsonResponse
+    {
+        $bloodRequest->incrementViewCount();
+
+        return response()->json([
+            'message' => 'View recorded successfully',
+            'view_count' => $bloodRequest->view_count,
+        ]);
     }
 
     /**
