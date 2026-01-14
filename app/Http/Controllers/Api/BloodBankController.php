@@ -148,6 +148,98 @@ class BloodBankController extends Controller
     }
 
     /**
+     * Get blood requests sent to this organization (blood bank).
+     * This returns organization_requests entries for the authenticated organization.
+     */
+    public function myRequests(Request $request): JsonResponse
+    {
+        // Get the authenticated organization (blood bank)
+        $user = $request->user();
+
+        // Check if user has organization_id or is an organization itself
+        $organizationId = $user->organization_id ?? $user->id;
+
+        // If authenticating as Organization directly
+        if ($user instanceof \App\Models\Organization) {
+            $organizationId = $user->id;
+        }
+
+        $query = \App\Models\OrganizationRequest::with(['bloodRequest.organization', 'bloodRequest.delivery'])
+            ->where('organization_id', $organizationId);
+
+        // Filter by read status
+        if ($request->has('is_read')) {
+            $isRead = filter_var($request->get('is_read'), FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_read', $isRead);
+        }
+
+        // Filter by request status
+        if ($request->has('status')) {
+            $query->whereHas('bloodRequest', function ($q) use ($request) {
+                $q->where('status', $request->get('status'));
+            });
+        }
+
+        $organizationRequests = $query->latest()->paginate($request->get('per_page', 15));
+
+        return response()->json($organizationRequests);
+    }
+
+    /**
+     * Mark a specific organization request as read.
+     */
+    public function markRequestAsRead(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user->organization_id ?? $user->id;
+
+        if ($user instanceof \App\Models\Organization) {
+            $organizationId = $user->id;
+        }
+
+        $organizationRequest = \App\Models\OrganizationRequest::where('id', $id)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (!$organizationRequest) {
+            return response()->json([
+                'message' => 'Request not found or unauthorized',
+            ], 404);
+        }
+
+        $organizationRequest->markAsRead();
+
+        // Also increment the view count on the blood request
+        $organizationRequest->bloodRequest->incrementViewCount();
+
+        return response()->json([
+            'message' => 'Request marked as read',
+            'organization_request' => $organizationRequest->load('bloodRequest'),
+        ]);
+    }
+
+    /**
+     * Get request statistics for authenticated organization.
+     */
+    public function requestStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $organizationId = $user->organization_id ?? $user->id;
+
+        if ($user instanceof \App\Models\Organization) {
+            $organizationId = $user->id;
+        }
+
+        $stats = [
+            'total_requests' => \App\Models\OrganizationRequest::where('organization_id', $organizationId)->count(),
+            'unread_requests' => \App\Models\OrganizationRequest::where('organization_id', $organizationId)->where('is_read', false)->count(),
+            'read_requests' => \App\Models\OrganizationRequest::where('organization_id', $organizationId)->where('is_read', true)->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    /**
      * Accept a blood request
      */
     public function acceptRequest(Request $request, $id): JsonResponse

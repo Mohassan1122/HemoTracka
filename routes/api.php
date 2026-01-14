@@ -256,6 +256,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::match(['get', 'put'], '/settings', [BloodBankController::class, 'settings']);
         Route::put('/profile', [BloodBankController::class, 'updateProfile']);
 
+        // My Requests (Organization-specific blood requests)
+        Route::get('/my-requests', [BloodBankController::class, 'myRequests']);
+        Route::get('/my-requests/stats', [BloodBankController::class, 'requestStats']);
+        Route::post('/my-requests/{id}/mark-as-read', [BloodBankController::class, 'markRequestAsRead']);
+
         // Inventory management
         Route::get('/inventory/summary', [InventoryController::class, 'summary']);
         Route::post('/inventory/{inventoryItem}/adjust-stock', [InventoryController::class, 'adjustStock']);
