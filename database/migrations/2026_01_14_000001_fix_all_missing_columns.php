@@ -20,6 +20,14 @@ return new class extends Migration {
             // Ignore if constraint operations fail
         }
 
+        // 1b. Fix compliance_requests constraints
+        try {
+            DB::statement("ALTER TABLE compliance_requests DROP CONSTRAINT IF EXISTS compliance_requests_status_check");
+            DB::statement("ALTER TABLE compliance_requests DROP CONSTRAINT IF EXISTS compliance_requests_organization_type_check");
+        } catch (\Throwable $e) {
+            // Ignore if constraint operations fail
+        }
+
         // 2. Fix regulatory_body_social_connections table
         if (Schema::hasTable('regulatory_body_social_connections')) {
             Schema::table('regulatory_body_social_connections', function (Blueprint $table) {
