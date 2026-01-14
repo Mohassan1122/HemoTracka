@@ -3,15 +3,30 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
     /**
      * Run the migrations.
-     * Add missing columns to notifications table.
+     * Add missing columns to notifications table and fix id column type.
      */
     public function up(): void
     {
         if (Schema::hasTable('notifications')) {
+            // For PostgreSQL: Convert id column from bigint to UUID if needed
+            if (DB::getDriverName() === 'pgsql') {
+                try {
+                    // Drop the primary key constraint first
+                    DB::statement("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_pkey");
+                    // Change id column to UUID type
+                    DB::statement("ALTER TABLE notifications ALTER COLUMN id TYPE VARCHAR(36)");
+                    // Recreate primary key
+                    DB::statement("ALTER TABLE notifications ADD PRIMARY KEY (id)");
+                } catch (\Throwable $e) {
+                    // Column might already be correct type
+                }
+            }
+
             Schema::table('notifications', function (Blueprint $table) {
                 if (!Schema::hasColumn('notifications', 'notifiable_type')) {
                     $table->string('notifiable_type')->nullable()->after('type');
