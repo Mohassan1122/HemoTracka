@@ -466,7 +466,7 @@ class FacilitiesController extends Controller
      */
     public function getAllFacilities(Request $request): JsonResponse
     {
-        $query = Organization::whereIn('type', ['Hospital', 'Blood Bank'])
+        $query = Organization::whereIn('role', ['facilities', 'blood_banks'])
             ->where('status', 'Active')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
@@ -479,12 +479,12 @@ class FacilitiesController extends Controller
             });
         }
 
-        if ($request->has('type')) {
-            $query->where('type', $request->type);
+        if ($request->has('role')) {
+            $query->where('role', $request->role);
         }
 
         // Return only essential map fields, no pagination
-        $facilities = $query->select(['id', 'name', 'address', 'longitude', 'latitude', 'type'])
+        $facilities = $query->select(['id', 'name', 'address', 'longitude', 'latitude', 'type', 'role'])
             ->get();
 
         return response()->json([
