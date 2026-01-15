@@ -153,15 +153,26 @@ class BloodBankController extends Controller
      */
     public function myRequests(Request $request): JsonResponse
     {
-        // Get the authenticated organization (blood bank)
-        $user = $request->user();
+        // Get the authenticated user (could be User or Organization)
+        $auth = $request->user();
 
-        // Check if user has organization_id or is an organization itself
-        $organizationId = $user->organization_id ?? $user->id;
+        // Determine organization ID based on auth type
+        // Organizations authenticate directly - check by class name
+        $organizationId = null;
 
-        // If authenticating as Organization directly
-        if ($user instanceof \App\Models\Organization) {
-            $organizationId = $user->id;
+        if (get_class($auth) === 'App\Models\Organization') {
+            // Authenticated as Organization directly
+            $organizationId = $auth->id;
+        } elseif ($auth->organization_id) {
+            // Authenticated as User with linked organization
+            $organizationId = $auth->organization_id;
+        }
+
+        if (!$organizationId) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+                'data' => [],
+            ], 200);
         }
 
         $query = \App\Models\OrganizationRequest::with(['bloodRequest.organization', 'bloodRequest.delivery'])
@@ -190,11 +201,13 @@ class BloodBankController extends Controller
      */
     public function markRequestAsRead(Request $request, $id): JsonResponse
     {
-        $user = $request->user();
-        $organizationId = $user->organization_id ?? $user->id;
+        $auth = $request->user();
+        $organizationId = null;
 
-        if ($user instanceof \App\Models\Organization) {
-            $organizationId = $user->id;
+        if (get_class($auth) === 'App\Models\Organization') {
+            $organizationId = $auth->id;
+        } elseif ($auth->organization_id) {
+            $organizationId = $auth->organization_id;
         }
 
         $organizationRequest = \App\Models\OrganizationRequest::where('id', $id)
@@ -223,11 +236,13 @@ class BloodBankController extends Controller
      */
     public function requestStats(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $organizationId = $user->organization_id ?? $user->id;
+        $auth = $request->user();
+        $organizationId = null;
 
-        if ($user instanceof \App\Models\Organization) {
-            $organizationId = $user->id;
+        if (get_class($auth) === 'App\Models\Organization') {
+            $organizationId = $auth->id;
+        } elseif ($auth->organization_id) {
+            $organizationId = $auth->organization_id;
         }
 
         $stats = [
