@@ -133,14 +133,24 @@ class BloodRequestController extends Controller
             );
         }
 
-        // Send notifications to Users (donors)
+        // Send notifications to Users (donors) - wrapped in try-catch for email rate limits
         if ($usersToNotify->count() > 0) {
-            Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
+            try {
+                Notification::send($usersToNotify, new NewBloodRequestNotification($bloodRequest));
+            } catch (\Exception $e) {
+                // Log error but don't fail the request - database entries are already created
+                \Log::warning('Failed to send notifications to donors: ' . $e->getMessage());
+            }
         }
 
-        // Send notifications to Organizations (Blood Banks)
+        // Send notifications to Organizations (Blood Banks) - wrapped in try-catch for email rate limits
         if ($organizationsToNotify->count() > 0) {
-            Notification::send($organizationsToNotify, new NewBloodRequestNotification($bloodRequest));
+            try {
+                Notification::send($organizationsToNotify, new NewBloodRequestNotification($bloodRequest));
+            } catch (\Exception $e) {
+                // Log error but don't fail the request - database entries are already created
+                \Log::warning('Failed to send notifications to blood banks: ' . $e->getMessage());
+            }
         }
     }
 
