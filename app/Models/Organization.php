@@ -39,6 +39,13 @@ class Organization extends Model implements Authenticatable
         'status',
     ];
 
+    /**
+     * Default attribute values for new organizations.
+     */
+    protected $attributes = [
+        'status' => 'Active',
+    ];
+
     protected $hidden = [
         'password',
         'remember_token',
