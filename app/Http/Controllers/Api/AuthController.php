@@ -31,6 +31,9 @@ class AuthController extends Controller
             'profile_picture_url' => $user->profile_picture_url,
             'date_of_birth' => $user->date_of_birth,
             'gender' => $user->gender,
+            'address' => $user->address,
+            'latitude' => $user->latitude,
+            'longitude' => $user->longitude,
             'email_verified_at' => $user->email_verified_at,
         ];
 
@@ -360,6 +363,9 @@ class AuthController extends Controller
             'phone' => ['sometimes', 'string', 'max:20', 'unique:users,phone,' . $user->id],
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'in:Male,Female,Other'],
+            'address' => ['sometimes', 'string', 'nullable'],
+            'latitude' => ['sometimes', 'numeric', 'between:-90,90', 'nullable'],
+            'longitude' => ['sometimes', 'numeric', 'between:-180,180', 'nullable'],
         ];
 
         // Add profile picture validation if it's present in the request
@@ -373,7 +379,6 @@ class AuthController extends Controller
                 'blood_group' => ['sometimes', 'string', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
                 'genotype' => ['sometimes', 'string', 'max:10'],
                 'height' => ['sometimes', 'string', 'max:10'],
-                'address' => ['sometimes', 'string'],
                 'notes' => ['sometimes', 'string'],
             ]);
         }
@@ -388,7 +393,7 @@ class AuthController extends Controller
             $validated['profile_picture'] = $path;
         }
 
-        // Update user table
+        // Update user table (including address, latitude, longitude)
         $user->update(array_filter($validated, function ($key) {
             return in_array($key, [
                 'first_name',
@@ -396,7 +401,10 @@ class AuthController extends Controller
                 'phone',
                 'date_of_birth',
                 'gender',
-                'profile_picture'
+                'profile_picture',
+                'address',
+                'latitude',
+                'longitude'
             ]);
         }, ARRAY_FILTER_USE_KEY));
 
