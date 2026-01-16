@@ -43,6 +43,13 @@ if [ ! -L /var/www/html/public/storage ]; then
     php artisan storage:link
 fi
 
+# Create upload directories if they don't exist
+mkdir -p /var/www/html/storage/app/public/profile_pictures
+mkdir -p /var/www/html/storage/app/public/organization_logos
+mkdir -p /var/www/html/storage/app/public/organization_covers
+chown -R www-data:www-data /var/www/html/storage/app/public
+chmod -R 775 /var/www/html/storage/app/public
+
 # Cache configuration
 php artisan config:cache
 php artisan route:cache
