@@ -48,6 +48,55 @@ class BloodRequestController extends Controller
     }
 
     /**
+     * Get all blood requests created by the authenticated organization.
+     * Returns requests with view_count to show how many have viewed them.
+     */
+    public function myCreatedRequests(Request $request): JsonResponse
+    {
+        $auth = $request->user();
+
+        // Determine organization ID based on auth type
+        $organizationId = null;
+
+        if (get_class($auth) === 'App\Models\Organization') {
+            // Authenticated as Organization directly
+            $organizationId = $auth->id;
+        } elseif ($auth->organization_id) {
+            // Authenticated as User with linked organization
+            $organizationId = $auth->organization_id;
+        }
+
+        if (!$organizationId) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+                'data' => [],
+            ], 200);
+        }
+
+        $query = BloodRequest::with(['organization', 'delivery', 'userRequests', 'organizationRequests'])
+            ->where('organization_id', $organizationId);
+
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by blood group
+        if ($request->has('blood_group')) {
+            $query->where('blood_group', $request->blood_group);
+        }
+
+        // Filter by type
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $requests = $query->latest()->paginate($request->get('per_page', 15));
+
+        return response()->json($requests);
+    }
+
+    /**
      * Store a newly created blood request.
      */
     public function store(Request $request): JsonResponse

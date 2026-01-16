@@ -173,6 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================================================================
     Route::post('/blood-requests/{bloodRequest}/cancel', [BloodRequestController::class, 'cancel']);
     Route::post('/blood-requests/{bloodRequest}/view', [BloodRequestController::class, 'recordView']);
+    Route::get('/blood-requests/my-created', [BloodRequestController::class, 'myCreatedRequests']);
     Route::apiResource('blood-requests', BloodRequestController::class)->parameters(['blood-requests' => 'bloodRequest']);
 
     // User Requests (Personal blood requests for the authenticated user)
