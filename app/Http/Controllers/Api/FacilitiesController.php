@@ -492,4 +492,88 @@ class FacilitiesController extends Controller
             'total' => $facilities->count()
         ]);
     }
+
+    /**
+     * Upload logo for the authenticated facility.
+     */
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'logo' => ['required', 'image', 'max:2048'], // Max 2MB
+        ]);
+
+        $auth = $request->user();
+        $organization = null;
+
+        if (get_class($auth) === 'App\Models\Organization') {
+            $organization = $auth;
+        } elseif ($auth->organization_id) {
+            $organization = \App\Models\Organization::find($auth->organization_id);
+        }
+
+        if (!$organization) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+            ], 403);
+        }
+
+        // Delete old logo if exists
+        if ($organization->logo && \Storage::disk('public')->exists($organization->logo)) {
+            \Storage::disk('public')->delete($organization->logo);
+        }
+
+        // Store new logo
+        $image = $request->file('logo');
+        $filename = time() . '_logo_' . $organization->id . '_' . $image->getClientOriginalName();
+        $path = $image->storeAs('organization_logos', $filename, 'public');
+
+        $organization->update(['logo' => $path]);
+
+        return response()->json([
+            'message' => 'Logo uploaded successfully',
+            'logo_url' => $organization->logo_url,
+        ]);
+    }
+
+    /**
+     * Upload cover photo for the authenticated facility.
+     */
+    public function uploadCoverPhoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'cover_photo' => ['required', 'image', 'max:5120'], // Max 5MB
+        ]);
+
+        $auth = $request->user();
+        $organization = null;
+
+        if (get_class($auth) === 'App\Models\Organization') {
+            $organization = $auth;
+        } elseif ($auth->organization_id) {
+            $organization = \App\Models\Organization::find($auth->organization_id);
+        }
+
+        if (!$organization) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+            ], 403);
+        }
+
+        // Delete old cover photo if exists
+        if ($organization->cover_photo && \Storage::disk('public')->exists($organization->cover_photo)) {
+            \Storage::disk('public')->delete($organization->cover_photo);
+        }
+
+        // Store new cover photo
+        $image = $request->file('cover_photo');
+        $filename = time() . '_cover_' . $organization->id . '_' . $image->getClientOriginalName();
+        $path = $image->storeAs('organization_covers', $filename, 'public');
+
+        $organization->update(['cover_photo' => $path]);
+
+        return response()->json([
+            'message' => 'Cover photo uploaded successfully',
+            'cover_photo_url' => $organization->cover_photo_url,
+        ]);
+    }
 }

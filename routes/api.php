@@ -192,6 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/donations', [DonorController::class, 'donations']);
         Route::get('/badges', [DonorBadgeController::class, 'donorBadges']);
         Route::post('/check-badges', [DonorBadgeController::class, 'checkAndAward']);
+        Route::post('/upload-profile-picture', [DonorController::class, 'uploadProfilePicture']);
 
         // Searching Blood Banks
         Route::get('/blood-banks', [OrganizationController::class, 'bloodBanks']);
@@ -220,6 +221,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Profile Management
         Route::put('/profile', [FacilitiesController::class, 'updateProfile']);
+        Route::post('/upload-logo', [FacilitiesController::class, 'uploadLogo']);
+        Route::post('/upload-cover-photo', [FacilitiesController::class, 'uploadCoverPhoto']);
 
         // Exports
         Route::get('/requests/export', [FacilitiesController::class, 'exportRequests']);
@@ -256,6 +259,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/deliveries/{id}/status', [BloodBankController::class, 'updateDeliveryStatus']);
         Route::match(['get', 'put'], '/settings', [BloodBankController::class, 'settings']);
         Route::put('/profile', [BloodBankController::class, 'updateProfile']);
+        Route::post('/upload-logo', [BloodBankController::class, 'uploadLogo']);
+        Route::post('/upload-cover-photo', [BloodBankController::class, 'uploadCoverPhoto']);
 
         // My Requests (Organization-specific blood requests)
         Route::get('/my-requests', [BloodBankController::class, 'myRequests']);

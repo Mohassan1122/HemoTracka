@@ -207,4 +207,39 @@ class DonorController extends Controller
 
         return "You can donate again in {$daysUntilEligible} days.";
     }
+
+    /**
+     * Upload profile picture for the authenticated donor user.
+     */
+    public function uploadProfilePicture(Request $request): JsonResponse
+    {
+        $request->validate([
+            'profile_picture' => ['required', 'image', 'max:2048'], // Max 2MB
+        ]);
+
+        $user = $request->user();
+
+        if ($user->role !== 'donor') {
+            return response()->json([
+                'message' => 'Only donors can use this endpoint',
+            ], 403);
+        }
+
+        // Delete old profile picture if exists
+        if ($user->profile_picture && \Storage::disk('public')->exists($user->profile_picture)) {
+            \Storage::disk('public')->delete($user->profile_picture);
+        }
+
+        // Store new profile picture
+        $image = $request->file('profile_picture');
+        $filename = time() . '_' . $user->id . '_' . $image->getClientOriginalName();
+        $path = $image->storeAs('profile_pictures', $filename, 'public');
+
+        $user->update(['profile_picture' => $path]);
+
+        return response()->json([
+            'message' => 'Profile picture uploaded successfully',
+            'profile_picture_url' => $user->profile_picture_url,
+        ]);
+    }
 }
