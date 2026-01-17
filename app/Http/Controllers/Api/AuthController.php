@@ -100,6 +100,7 @@ class AuthController extends Controller
                     'type' => $org->type,
                     'role' => $org->role,
                     'email' => $org->email,
+                    'contact_email' => $org->contact_email,
                     'phone' => $org->phone,
                     'address' => $org->address,
                     'license_number' => $org->license_number,
@@ -111,6 +112,10 @@ class AuthController extends Controller
                     'operating_hours' => $org->operating_hours,
                     'services' => $org->services,
                     'description' => $org->description,
+                    'facebook_link' => $org->facebook_link,
+                    'twitter_link' => $org->twitter_link,
+                    'instagram_link' => $org->instagram_link,
+                    'linkedin_link' => $org->linkedin_link,
                 ];
             }
         }
