@@ -215,7 +215,7 @@ class AuthController extends Controller
             'license_number' => ['required', 'string', 'max:100', 'unique:organizations'],
             'address' => ['required', 'string'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'], // Now unique in users table
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'type' => ['required', 'in:Hospital,Blood Bank'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
