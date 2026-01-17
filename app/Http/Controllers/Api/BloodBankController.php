@@ -444,7 +444,14 @@ class BloodBankController extends Controller
             ], 403);
         }
 
-        $organization = $user->organization;
+        // Support both old (organization_id) and new (linkedOrganization) auth patterns
+        $organization = $user->organization ?? $user->linkedOrganization;
+
+        if (!$organization) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+            ], 403);
+        }
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
@@ -452,17 +459,25 @@ class BloodBankController extends Controller
             'phone' => ['sometimes', 'string', 'max:20'],
             'address' => ['sometimes', 'string'],
             'operating_hours' => ['sometimes', 'array'],
-            'description' => ['sometimes', 'string'],
+            'description' => ['sometimes', 'nullable', 'string'],
             'services' => ['sometimes', 'array'],
-            'facebook_link' => ['sometimes', 'string', 'url'],
-            'twitter_link' => ['sometimes', 'string', 'url'],
-            'instagram_link' => ['sometimes', 'string', 'url'],
-            'linkedin_link' => ['sometimes', 'string', 'url'],
+            'facebook_link' => ['sometimes', 'nullable', 'string'],
+            'twitter_link' => ['sometimes', 'nullable', 'string'],
+            'instagram_link' => ['sometimes', 'nullable', 'string'],
+            'linkedin_link' => ['sometimes', 'nullable', 'string'],
             'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
             'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
-            'logo' => ['sometimes', 'image', 'max:2048'],
-            'cover_photo' => ['sometimes', 'image', 'max:5120'],
         ]);
+
+        // Validate logo only if it's actually a file upload
+        if ($request->hasFile('logo')) {
+            $request->validate(['logo' => ['image', 'max:2048']]);
+        }
+
+        // Validate cover_photo only if it's actually a file upload
+        if ($request->hasFile('cover_photo')) {
+            $request->validate(['cover_photo' => ['image', 'max:5120']]);
+        }
 
         // Handle logo upload if provided
         if ($request->hasFile('logo')) {
