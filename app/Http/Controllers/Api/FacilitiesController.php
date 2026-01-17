@@ -366,7 +366,14 @@ class FacilitiesController extends Controller
             ], 403);
         }
 
-        $organization = $user->organization;
+        // Support both old (organization_id) and new (linkedOrganization) auth patterns
+        $organization = $user->organization ?? $user->linkedOrganization;
+
+        if (!$organization) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+            ], 403);
+        }
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
