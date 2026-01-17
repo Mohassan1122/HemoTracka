@@ -89,6 +89,32 @@ class AuthController extends Controller
             }
         }
 
+        // Add organization data if user is facilities or blood_banks (new auth pattern)
+        if (in_array($user->role, ['facilities', 'blood_banks'])) {
+            $user->load('linkedOrganization');
+            $org = $user->linkedOrganization;
+            if ($org) {
+                $profileData['organization'] = [
+                    'id' => $org->id,
+                    'name' => $org->name,
+                    'type' => $org->type,
+                    'role' => $org->role,
+                    'email' => $org->email,
+                    'phone' => $org->phone,
+                    'address' => $org->address,
+                    'license_number' => $org->license_number,
+                    'status' => $org->status,
+                    'logo_url' => $org->logo_url,
+                    'cover_photo_url' => $org->cover_photo_url,
+                    'latitude' => $org->latitude,
+                    'longitude' => $org->longitude,
+                    'operating_hours' => $org->operating_hours,
+                    'services' => $org->services,
+                    'description' => $org->description,
+                ];
+            }
+        }
+
         return $profileData;
     }
 
@@ -234,6 +260,8 @@ class AuthController extends Controller
             'role' => $role,
             'phone' => $validated['phone'],
             'address' => $validated['address'],
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
         ]);
 
         // Create Organization linked to User
