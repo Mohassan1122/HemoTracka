@@ -156,16 +156,18 @@ class BloodBankController extends Controller
         // Get the authenticated user (could be User or Organization)
         $auth = $request->user();
 
-        // Determine organization ID based on auth type
-        // Organizations authenticate directly - check by class name
+        // Determine organization ID based on auth type (supports all patterns)
         $organizationId = null;
 
         if (get_class($auth) === 'App\Models\Organization') {
-            // Authenticated as Organization directly
+            // Authenticated as Organization directly (existing pattern)
             $organizationId = $auth->id;
         } elseif ($auth->organization_id) {
-            // Authenticated as User with linked organization
+            // Authenticated as User with organization_id (staff pattern)
             $organizationId = $auth->organization_id;
+        } elseif ($auth->linkedOrganization) {
+            // Authenticated as User who owns an organization (new pattern)
+            $organizationId = $auth->linkedOrganization->id;
         }
 
         if (!$organizationId) {
@@ -208,6 +210,8 @@ class BloodBankController extends Controller
             $organizationId = $auth->id;
         } elseif ($auth->organization_id) {
             $organizationId = $auth->organization_id;
+        } elseif ($auth->linkedOrganization) {
+            $organizationId = $auth->linkedOrganization->id;
         }
 
         $organizationRequest = \App\Models\OrganizationRequest::where('id', $id)
@@ -243,6 +247,8 @@ class BloodBankController extends Controller
             $organizationId = $auth->id;
         } elseif ($auth->organization_id) {
             $organizationId = $auth->organization_id;
+        } elseif ($auth->linkedOrganization) {
+            $organizationId = $auth->linkedOrganization->id;
         }
 
         $stats = [
@@ -525,6 +531,8 @@ class BloodBankController extends Controller
             $organization = $auth;
         } elseif ($auth->organization_id) {
             $organization = \App\Models\Organization::find($auth->organization_id);
+        } elseif ($auth->linkedOrganization) {
+            $organization = $auth->linkedOrganization;
         }
 
         if (!$organization) {
@@ -567,6 +575,8 @@ class BloodBankController extends Controller
             $organization = $auth;
         } elseif ($auth->organization_id) {
             $organization = \App\Models\Organization::find($auth->organization_id);
+        } elseif ($auth->linkedOrganization) {
+            $organization = $auth->linkedOrganization;
         }
 
         if (!$organization) {

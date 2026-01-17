@@ -55,15 +55,18 @@ class BloodRequestController extends Controller
     {
         $auth = $request->user();
 
-        // Determine organization ID based on auth type
+        // Determine organization ID based on auth type (supports all patterns)
         $organizationId = null;
 
         if (get_class($auth) === 'App\Models\Organization') {
-            // Authenticated as Organization directly
+            // Authenticated as Organization directly (existing pattern)
             $organizationId = $auth->id;
         } elseif ($auth->organization_id) {
-            // Authenticated as User with linked organization
+            // Authenticated as User with organization_id (staff pattern)
             $organizationId = $auth->organization_id;
+        } elseif ($auth->linkedOrganization) {
+            // Authenticated as User who owns an organization (new pattern)
+            $organizationId = $auth->linkedOrganization->id;
         }
 
         if (!$organizationId) {

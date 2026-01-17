@@ -509,6 +509,8 @@ class FacilitiesController extends Controller
             $organization = $auth;
         } elseif ($auth->organization_id) {
             $organization = \App\Models\Organization::find($auth->organization_id);
+        } elseif ($auth->linkedOrganization) {
+            $organization = $auth->linkedOrganization;
         }
 
         if (!$organization) {
@@ -551,6 +553,8 @@ class FacilitiesController extends Controller
             $organization = $auth;
         } elseif ($auth->organization_id) {
             $organization = \App\Models\Organization::find($auth->organization_id);
+        } elseif ($auth->linkedOrganization) {
+            $organization = $auth->linkedOrganization;
         }
 
         if (!$organization) {

@@ -214,35 +214,52 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'license_number' => ['required', 'string', 'max:100', 'unique:organizations'],
             'address' => ['required', 'string'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:organizations'], // Org email now used for auth
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'], // Now unique in users table
             'phone' => ['required', 'string', 'max:20'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'type' => ['required', 'in:Hospital,Blood Bank'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],  // Optional latitude
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],  // Optional longitude
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
-        // Map role to type strictly if needed, or trust input type
+        // Determine role based on type
+        $role = $validated['type'] === 'Hospital' ? 'facilities' : 'blood_banks';
+
+        // Create User record first (for auth)
+        $user = User::create([
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'first_name' => $validated['name'],
+            'last_name' => '',
+            'role' => $role,
+            'phone' => $validated['phone'],
+            'address' => $validated['address'],
+        ]);
+
+        // Create Organization linked to User
         $organization = \App\Models\Organization::create([
+            'user_id' => $user->id,
             'name' => $validated['name'],
             'license_number' => $validated['license_number'],
             'address' => $validated['address'],
             'email' => $validated['email'],
-            'contact_email' => $validated['email'], // Sync contact email
+            'contact_email' => $validated['email'],
             'phone' => $validated['phone'],
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($validated['password']), // Keep for backward compatibility
             'type' => $validated['type'],
-            'role' => $validated['type'] === 'Hospital' ? 'facilities' : 'blood_banks',
-            'status' => 'Pending',
+            'role' => $role,
+            'status' => 'Active',
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
         ]);
 
-        $token = $organization->createToken('auth_token')->plainTextToken;
+        // Create token from User (new auth pattern)
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Organization registration successful.',
-            'user' => $organization, // Frontend expects 'user' key often
+            'user' => $user->load('linkedOrganization'),
+            'organization' => $organization,
             'token' => $token,
             'token_type' => 'Bearer',
         ], 201);

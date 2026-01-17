@@ -16,6 +16,7 @@ class Organization extends Model implements Authenticatable
     use HasFactory, SoftDeletes, AuthenticatableTrait, HasApiTokens, Notifiable;
 
     protected $fillable = [
+        'user_id',
         'name',
         'type',
         'role',
@@ -65,6 +66,14 @@ class Organization extends Model implements Authenticatable
         'logo_url',
         'cover_photo_url',
     ];
+
+    /**
+     * Get the user that owns the organization (for new auth system).
+     */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function users(): HasMany
     {

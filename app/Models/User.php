@@ -75,6 +75,15 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * Get the organization owned by this user (for new auth system).
+     * This is used when User has role 'facilities' or 'blood_banks'.
+     */
+    public function linkedOrganization(): HasOne
+    {
+        return $this->hasOne(Organization::class);
+    }
+
     public function donor(): HasOne
     {
         return $this->hasOne(Donor::class);
