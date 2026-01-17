@@ -149,10 +149,12 @@ class BloodRequestController extends Controller
         }
 
         // Get blood bank organizations (blood banks are Organizations, not Users)
+        // Exclude the organization that created the request - they shouldn't receive their own request
         if ($requestSource === 'blood_banks' || $requestSource === 'both') {
             $organizationsToNotify = $organizationsToNotify->merge(
                 \App\Models\Organization::where('role', 'blood_banks')
                     ->where('status', 'Active')
+                    ->where('id', '!=', $bloodRequest->organization_id) // Exclude requester
                     ->get()
             );
         }
