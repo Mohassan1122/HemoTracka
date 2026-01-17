@@ -39,6 +39,7 @@ class RegulatoryBodyAuthController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'first_name' => $request->institution_name,
+                'last_name' => '', // Regulatory bodies don't have a last name
                 'role' => 'regulatory_body',
             ]);
 
