@@ -37,9 +37,16 @@ class RegulatoryBodyInventoryController extends Controller
 
             // Apply state filter if state-level regulator
             if ($regulatoryBody->isState()) {
-                $query->join('organizations', 'inventory_items.organization_id', '=', 'organizations.id')
-                    ->where('organizations.state_id', $regulatoryBody->state_id)
-                    ->select('inventory_items.*');
+                $query->whereHas('organization', function ($q) use ($regulatoryBody) {
+                    $q->where('state_id', $regulatoryBody->state_id);
+                });
+            }
+
+            // Apply location filter (if provided)
+            if ($location) {
+                $query->whereHas('organization', function ($q) use ($location) {
+                    $q->where('state_id', $location);
+                });
             }
 
             // Apply blood group filter
@@ -47,32 +54,27 @@ class RegulatoryBodyInventoryController extends Controller
                 $query->where('blood_group', $bloodGroup);
             }
 
-            // Apply status filter
+            // Apply status filter (Derived from units_in_stock vs threshold)
             if ($status) {
-                $normalizedStatus = strtolower(str_replace('_', ' ', $status));
-                if ($normalizedStatus === 'out of stock') {
+                $status = strtolower($status);
+                if (in_array($status, ['out of stock', 'out_of_stock'])) {
                     $query->where('units_in_stock', '<=', 0);
-                } elseif ($normalizedStatus === 'critical') {
-                    $query->whereColumn('units_in_stock', '<', 'threshold')
-                        ->where('units_in_stock', '>', 0);
-                } elseif ($normalizedStatus === 'good' || $normalizedStatus === 'healthy') {
+                } elseif (in_array($status, ['critical', 'low'])) {
+                    $query->where('units_in_stock', '>', 0)
+                        ->whereColumn('units_in_stock', '<', 'threshold');
+                } elseif (in_array($status, ['good', 'healthy'])) {
                     $query->whereColumn('units_in_stock', '>=', 'threshold');
                 }
             }
 
-            // Apply location filter (State ID)
-            if ($location) {
-                // If not already joined (i.e. not state regulator or joining for first time)
-                if (!$regulatoryBody->isState()) {
-                    $query->join('organizations', 'inventory_items.organization_id', '=', 'organizations.id')
-                        ->where('organizations.state_id', $location)
-                        ->select('inventory_items.*');
-                }
-            }
-
-            // Apply search
+            // Apply search (Blood Group or Organization Name)
             if ($search) {
-                $query->where('blood_group', 'like', '%' . $search . '%');
+                $query->where(function ($q) use ($search) {
+                    $q->where('blood_group', 'like', "%{$search}%")
+                        ->orWhereHas('organization', function ($subQ) use ($search) {
+                            $subQ->where('name', 'like', "%{$search}%");
+                        });
+                });
             }
 
             // Get paginated results
