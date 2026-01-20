@@ -110,27 +110,27 @@ class RegulatoryBodyComplianceController extends Controller
 
             $demandQuery = BloodRequest::select(
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d") as date'),
-                'blood_type',
+                'blood_group',
                 DB::raw('COUNT(*) as demand')
             )
-            ->groupBy('date', 'blood_type')
-            ->orderBy('date');
+                ->groupBy('date', 'blood_group')
+                ->orderBy('date');
 
             if ($bloodType) {
-                $demandQuery->where('blood_type', $bloodType);
+                $demandQuery->where('blood_group', $bloodType);
             }
 
             $supplyQuery = DB::table('inventory_items')
                 ->select(
-                    DB::raw('DATE_FORMAT(last_restocked, "%Y-%m-%d") as date'),
-                    'blood_type',
-                    DB::raw('SUM(quantity) as supply')
+                    DB::raw('DATE_FORMAT(updated_at, "%Y-%m-%d") as date'),
+                    'blood_group',
+                    DB::raw('SUM(units_in_stock) as supply')
                 )
-                ->groupBy('date', 'blood_type')
+                ->groupBy('date', 'blood_group')
                 ->orderBy('date');
 
             if ($bloodType) {
-                $supplyQuery->where('blood_type', $bloodType);
+                $supplyQuery->where('blood_group', $bloodType);
             }
 
             $demand = $demandQuery->get();
