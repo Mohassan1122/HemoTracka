@@ -121,7 +121,7 @@ class RegulatoryBodyBloodBanksController extends Controller
             $totalDonations = Donation::where('organization_id', $id)->count();
 
             // Get average donor age
-            $averageDonorAge = Donation::where('organization_id', $id)
+            $averageDonorAge = Donation::where('donations.organization_id', $id)
                 ->join('users', 'donations.donor_id', '=', 'users.id')
                 ->selectRaw('AVG(YEAR(NOW()) - YEAR(users.date_of_birth)) as avg_age')
                 ->value('avg_age');
