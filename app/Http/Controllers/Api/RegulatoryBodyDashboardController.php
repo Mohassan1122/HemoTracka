@@ -45,7 +45,7 @@ class RegulatoryBodyDashboardController extends Controller
             $totalDonors = Donor::count();
 
             // Get blood in stock
-            $bloodInStock = InventoryItem::sum('quantity');
+            $bloodInStock = InventoryItem::sum('units_in_stock');
 
             // Get compliance stats
             $complianceRequests = ComplianceRequest::query();
@@ -89,15 +89,15 @@ class RegulatoryBodyDashboardController extends Controller
             $period = $request->input('period', 'monthly'); // weekly, monthly, yearly
 
             $query = InventoryItem::select(
-                DB::raw('DATE_FORMAT(last_restocked, "%Y-%m-%d") as date'),
-                'blood_type',
-                DB::raw('SUM(quantity) as quantity')
+                DB::raw('DATE_FORMAT(updated_at, "%Y-%m-%d") as date'),
+                'blood_group',
+                DB::raw('SUM(units_in_stock) as units_in_stock')
             )
-            ->groupBy('date', 'blood_type')
-            ->orderBy('date');
+                ->groupBy('date', 'blood_group')
+                ->orderBy('date');
 
             // Filter by period
-            $query = $this->applyPeriodFilter($query, $period, 'last_restocked');
+            $query = $this->applyPeriodFilter($query, $period, 'updated_at');
 
             $chartData = $query->get();
 
@@ -119,9 +119,9 @@ class RegulatoryBodyDashboardController extends Controller
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
                 DB::raw('COUNT(*) as count')
             )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
 
             $trendData = [
                 'data' => $donations,
@@ -161,7 +161,7 @@ class RegulatoryBodyDashboardController extends Controller
         try {
             $limit = $request->input('limit', 5);
 
-            $requests = BloodRequest::select('id', 'blood_type', 'quantity', 'status', 'created_at')
+            $requests = BloodRequest::select('id', 'blood_group', 'units_needed', 'status', 'created_at')
                 ->with('organization:id,name')
                 ->orderByDesc('created_at')
                 ->limit($limit)

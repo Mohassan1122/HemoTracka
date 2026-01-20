@@ -27,7 +27,7 @@ class RegulatoryBodyInventoryController extends Controller
 
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 10);
-            $bloodType = $request->input('blood_type', '');
+            $bloodGroup = $request->input('blood_group', '');
             $location = $request->input('location', '');
             $status = $request->input('status', '');
             $search = $request->input('search', '');
@@ -42,9 +42,9 @@ class RegulatoryBodyInventoryController extends Controller
                     ->select('inventory_items.*');
             }
 
-            // Apply blood type filter
-            if ($bloodType) {
-                $query->where('blood_type', $bloodType);
+            // Apply blood group filter
+            if ($bloodGroup) {
+                $query->where('blood_group', $bloodGroup);
             }
 
             // Apply status filter
@@ -54,7 +54,7 @@ class RegulatoryBodyInventoryController extends Controller
 
             // Apply search
             if ($search) {
-                $query->where('blood_type', 'like', '%' . $search . '%');
+                $query->where('blood_group', 'like', '%' . $search . '%');
             }
 
             // Get paginated results
@@ -65,11 +65,11 @@ class RegulatoryBodyInventoryController extends Controller
                 return [
                     'id' => $item->id,
                     'bank_name' => $item->organization->name ?? 'N/A',
-                    'blood_type' => $item->blood_type,
-                    'pints_available' => $item->quantity,
-                    'last_restocked' => $item->last_restocked,
-                    'usage_rate' => $item->usage_rate ?? '0%',
-                    'status' => $item->status,
+                    'blood_group' => $item->blood_group,
+                    'pints_available' => $item->units_in_stock,
+                    'updated_at' => $item->updated_at,
+                    'usage_rate' => 'N/A', // Not tracked currently
+                    'status' => $item->units_in_stock <= 0 ? 'Out of Stock' : ($item->units_in_stock < $item->threshold ? 'Critical' : 'Good'),
                 ];
             });
 
@@ -103,11 +103,11 @@ class RegulatoryBodyInventoryController extends Controller
 
             $query = DB::table('inventory_items')
                 ->select(
-                    'blood_type',
-                    DB::raw('SUM(quantity) as total_quantity')
+                    'blood_group',
+                    DB::raw('SUM(units_in_stock) as total_quantity')
                 )
-                ->groupBy('blood_type')
-                ->orderBy('blood_type');
+                ->groupBy('blood_group')
+                ->orderBy('blood_group');
 
             if ($regulatoryBody->isState()) {
                 $query->join('organizations', 'inventory_items.organization_id', '=', 'organizations.id')
@@ -186,9 +186,9 @@ class RegulatoryBodyInventoryController extends Controller
                     ->where('organizations.state_id', $regulatoryBody->state_id);
             }
 
-            $totalPints = $query->sum('quantity');
-            $criticalItems = (clone $query)->where('status', 'critical')->get();
-            $outOfStock = (clone $query)->where('status', 'out_of_stock')->get();
+            $totalPints = $query->sum('units_in_stock');
+            $criticalItems = (clone $query)->whereColumn('units_in_stock', '<', 'threshold')->get();
+            $outOfStock = (clone $query)->where('units_in_stock', '<=', 0)->get();
 
             return response()->json([
                 'total_pints' => $totalPints,

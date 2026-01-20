@@ -113,8 +113,8 @@ class RegulatoryBodyBloodBanksController extends Controller
             // Get inventory
             $inventory = DB::table('inventory_items')
                 ->where('organization_id', $id)
-                ->select('blood_type', DB::raw('SUM(quantity) as pints_available'), 'last_restocked', 'status')
-                ->groupBy('blood_type')
+                ->select('blood_group', DB::raw('SUM(units_in_stock) as pints_available'), DB::raw('MAX(updated_at) as last_restocked'))
+                ->groupBy('blood_group')
                 ->get();
 
             // Get donations count
@@ -187,11 +187,11 @@ class RegulatoryBodyBloodBanksController extends Controller
             $chartData = DB::table('inventory_items')
                 ->where('organization_id', $id)
                 ->select(
-                    DB::raw('DATE_FORMAT(last_restocked, "%Y-%m-%d") as date'),
-                    'blood_type',
-                    DB::raw('SUM(quantity) as quantity')
+                    DB::raw('DATE_FORMAT(updated_at, "%Y-%m-%d") as date'),
+                    'blood_group',
+                    DB::raw('SUM(units_in_stock) as quantity')
                 )
-                ->groupBy('date', 'blood_type')
+                ->groupBy('date', 'blood_group')
                 ->orderBy('date')
                 ->get();
 
@@ -217,10 +217,10 @@ class RegulatoryBodyBloodBanksController extends Controller
             $demandData = BloodRequest::where('organization_id', $id)
                 ->select(
                     DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d") as date'),
-                    'blood_type',
+                    'blood_group',
                     DB::raw('COUNT(*) as count')
                 )
-                ->groupBy('date', 'blood_type')
+                ->groupBy('date', 'blood_group')
                 ->orderBy('date')
                 ->get();
 
@@ -228,11 +228,11 @@ class RegulatoryBodyBloodBanksController extends Controller
             $supplyData = DB::table('inventory_items')
                 ->where('organization_id', $id)
                 ->select(
-                    DB::raw('DATE_FORMAT(last_restocked, "%Y-%m-%d") as date'),
-                    'blood_type',
-                    DB::raw('SUM(quantity) as quantity')
+                    DB::raw('DATE_FORMAT(updated_at, "%Y-%m-%d") as date'),
+                    'blood_group',
+                    DB::raw('SUM(units_in_stock) as quantity')
                 )
-                ->groupBy('date', 'blood_type')
+                ->groupBy('date', 'blood_group')
                 ->orderBy('date')
                 ->get();
 
