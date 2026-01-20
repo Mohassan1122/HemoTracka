@@ -57,9 +57,6 @@ class RegulatoryBodyAuthController extends Controller
                 'notification_preferences' => $this->getDefaultNotificationPreferences(),
             ]);
 
-            // Assign role to user
-            $user->assignRole('regulatory_body');
-
             // Create token
             $token = $user->createToken('auth_token')->plainTextToken;
 
