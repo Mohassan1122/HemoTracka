@@ -29,16 +29,16 @@ class RegulatoryBodyMessagesController extends Controller
             $search = $request->input('search', '');
 
             $query = Message::where(function ($q) use ($request) {
-                $q->where('receiver_id', $request->user()->id)
-                    ->orWhere('sender_id', $request->user()->id);
+                $q->where('to_user_id', $request->user()->id)
+                    ->orWhere('from_user_id', $request->user()->id);
             })
-            ->select(
-                DB::raw('CASE WHEN sender_id = ' . $request->user()->id . ' THEN receiver_id ELSE sender_id END as other_user_id'),
-                DB::raw('MAX(created_at) as last_message_at'),
-                DB::raw('SUM(CASE WHEN receiver_id = ' . $request->user()->id . ' AND read_at IS NULL THEN 1 ELSE 0 END) as unread_count')
-            )
-            ->groupBy('other_user_id')
-            ->orderByDesc('last_message_at');
+                ->select(
+                    DB::raw('CASE WHEN from_user_id = ' . $request->user()->id . ' THEN to_user_id ELSE from_user_id END as other_user_id'),
+                    DB::raw('MAX(created_at) as last_message_at'),
+                    DB::raw('SUM(CASE WHEN to_user_id = ' . $request->user()->id . ' AND read_at IS NULL THEN 1 ELSE 0 END) as unread_count')
+                )
+                ->groupBy('other_user_id')
+                ->orderByDesc('last_message_at');
 
             if ($search) {
                 // This is a simplified search - in production, you'd join with users/organizations
@@ -51,7 +51,7 @@ class RegulatoryBodyMessagesController extends Controller
             $conversations->getCollection()->transform(function ($conv) {
                 $otherUser = \App\Models\User::find($conv->other_user_id);
                 $organization = Organization::where('user_id', $conv->other_user_id)->first();
-                
+
                 return [
                     'id' => $conv->other_user_id,
                     'organization_name' => $organization ? $organization->name : ($otherUser ? $otherUser->first_name : 'Unknown'),
@@ -92,19 +92,19 @@ class RegulatoryBodyMessagesController extends Controller
             // Get messages in conversation
             $messages = Message::where(function ($q) use ($request, $conversationId) {
                 $q->where(function ($q2) use ($request, $conversationId) {
-                    $q2->where('sender_id', $request->user()->id)
-                        ->where('receiver_id', $conversationId);
+                    $q2->where('from_user_id', $request->user()->id)
+                        ->where('to_user_id', $conversationId);
                 })->orWhere(function ($q2) use ($request, $conversationId) {
-                    $q2->where('sender_id', $conversationId)
-                        ->where('receiver_id', $request->user()->id);
+                    $q2->where('from_user_id', $conversationId)
+                        ->where('to_user_id', $request->user()->id);
                 });
             })
-            ->orderByDesc('created_at')
-            ->paginate($perPage, ['*'], 'page', $page);
+                ->orderByDesc('created_at')
+                ->paginate($perPage, ['*'], 'page', $page);
 
             // Mark messages as read
-            Message::where('receiver_id', $request->user()->id)
-                ->where('sender_id', $conversationId)
+            Message::where('to_user_id', $request->user()->id)
+                ->where('from_user_id', $conversationId)
                 ->whereNull('read_at')
                 ->update(['read_at' => now()]);
 
@@ -149,9 +149,9 @@ class RegulatoryBodyMessagesController extends Controller
             }
 
             $message = Message::create([
-                'sender_id' => $request->user()->id,
-                'receiver_id' => $request->receiver_id,
-                'content' => $request->content,
+                'from_user_id' => $request->user()->id,
+                'to_user_id' => $request->receiver_id,
+                'body' => $request->content,
             ]);
 
             return response()->json([
@@ -186,17 +186,18 @@ class RegulatoryBodyMessagesController extends Controller
             $messages = [];
             foreach ($request->blood_bank_ids as $bloodBankId) {
                 $organization = Organization::find($bloodBankId);
-                
+
                 if ($organization && $organization->user_id) {
+                    $priority = $request->priority ?? 'high';
+                    $bodyContent = "[ALERT - " . strtoupper($priority) . "]\n\n" . $request->content;
+
                     $message = Message::create([
-                        'sender_id' => $request->user()->id,
-                        'receiver_id' => $organization->user_id,
-                        'content' => $request->content,
-                        'subject' => '[ALERT] ' . $request->title,
-                        'priority' => $request->priority ?? 'high',
-                        'type' => 'alert',
+                        'from_user_id' => $request->user()->id,
+                        'to_user_id' => $organization->user_id,
+                        'body' => $bodyContent,
+                        'subject' => $request->title,
                     ]);
-                    
+
                     $messages[] = $message;
                 }
             }
@@ -218,7 +219,7 @@ class RegulatoryBodyMessagesController extends Controller
         try {
             $message = Message::find($id);
 
-            if (!$message || $message->receiver_id !== $request->user()->id) {
+            if (!$message || $message->to_user_id !== $request->user()->id) {
                 return response()->json(['error' => 'Message not found or unauthorized.'], 404);
             }
 
