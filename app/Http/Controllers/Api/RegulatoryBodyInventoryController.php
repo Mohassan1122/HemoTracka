@@ -49,7 +49,25 @@ class RegulatoryBodyInventoryController extends Controller
 
             // Apply status filter
             if ($status) {
-                $query->where('status', $status);
+                $normalizedStatus = strtolower(str_replace('_', ' ', $status));
+                if ($normalizedStatus === 'out of stock') {
+                    $query->where('units_in_stock', '<=', 0);
+                } elseif ($normalizedStatus === 'critical') {
+                    $query->whereColumn('units_in_stock', '<', 'threshold')
+                        ->where('units_in_stock', '>', 0);
+                } elseif ($normalizedStatus === 'good' || $normalizedStatus === 'healthy') {
+                    $query->whereColumn('units_in_stock', '>=', 'threshold');
+                }
+            }
+
+            // Apply location filter (State ID)
+            if ($location) {
+                // If not already joined (i.e. not state regulator or joining for first time)
+                if (!$regulatoryBody->isState()) {
+                    $query->join('organizations', 'inventory_items.organization_id', '=', 'organizations.id')
+                        ->where('organizations.state_id', $location)
+                        ->select('inventory_items.*');
+                }
             }
 
             // Apply search
