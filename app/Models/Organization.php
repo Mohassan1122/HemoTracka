@@ -120,6 +120,11 @@ class Organization extends Model implements Authenticatable
         return $this->hasMany(Offer::class);
     }
 
+    public function state(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(State::class);
+    }
+
     /**
      * Get the logo URL for API responses.
      */
