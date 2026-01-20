@@ -36,10 +36,10 @@ class RegulatoryBodyDashboardController extends Controller
             }
 
             // Get blood banks
-            $totalBloodBanks = $organizationsQuery->where('type', 'blood_bank')->count();
+            $totalBloodBanks = (clone $organizationsQuery)->where('type', 'Blood Bank')->count();
 
             // Get health facilities
-            $totalHealthFacilities = $organizationsQuery->where('type', 'health_facility')->count();
+            $totalHealthFacilities = (clone $organizationsQuery)->where('type', 'Hospital')->count();
 
             // Get total donors
             $totalDonors = Donor::count();

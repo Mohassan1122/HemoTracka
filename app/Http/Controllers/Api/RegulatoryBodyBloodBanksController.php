@@ -32,7 +32,7 @@ class RegulatoryBodyBloodBanksController extends Controller
             $sortBy = $request->input('sort_by', 'created_at');
             $sortOrder = $request->input('sort_order', 'desc');
 
-            $query = Organization::where('type', 'blood_bank')
+            $query = Organization::where('type', 'Blood Bank')
                 ->select(
                     'id',
                     'name',
@@ -97,7 +97,7 @@ class RegulatoryBodyBloodBanksController extends Controller
                 return response()->json(['error' => 'Regulatory body not found.'], 404);
             }
 
-            $query = Organization::where('id', $id)->where('type', 'blood_bank');
+            $query = Organization::where('id', $id)->where('type', 'Blood Bank');
 
             // Apply state filter if state-level regulator
             if ($regulatoryBody->isState()) {
@@ -172,7 +172,7 @@ class RegulatoryBodyBloodBanksController extends Controller
             }
 
             // Verify blood bank exists and belongs to regulator's scope
-            $bloodBank = Organization::where('id', $id)->where('type', 'blood_bank');
+            $bloodBank = Organization::where('id', $id)->where('type', 'Blood Bank');
 
             if ($regulatoryBody->isState()) {
                 $bloodBank->where('state_id', $regulatoryBody->state_id);
