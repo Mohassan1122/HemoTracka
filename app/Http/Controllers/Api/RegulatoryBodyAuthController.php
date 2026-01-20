@@ -25,7 +25,7 @@ class RegulatoryBodyAuthController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
             'level' => ['required', 'in:federal,state'],
             'state_id' => ['required_if:level,state', 'nullable', 'exists:states,id'],
-            'phone_number' => ['nullable', 'string', 'max:20'],
+            'phone_number' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'address' => ['nullable', 'string'],
         ]);
 
@@ -41,6 +41,7 @@ class RegulatoryBodyAuthController extends Controller
                 'first_name' => $request->institution_name,
                 'last_name' => '', // Regulatory bodies don't have a last name
                 'role' => 'regulatory_body',
+                'phone' => $request->phone_number ?? '', // Required by users table
             ]);
 
             // Create regulatory body record
