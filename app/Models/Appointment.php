@@ -14,12 +14,21 @@ class Appointment extends Model
     protected $fillable = [
         'donor_id',
         'organization_id',
+        'user_request_id',
         'appointment_date',
         'appointment_time',
         'status',
         'donation_type',
+        'type', // Walk-in or Scheduled
+        'blood_group',
+        'genotype',
         'notes',
         'cancellation_reason',
+        'accepted_by',
+        'accepted_at',
+        'rejected_by',
+        'rejected_at',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -41,6 +50,14 @@ class Appointment extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Get the user request this appointment is responding to.
+     */
+    public function userRequest(): BelongsTo
+    {
+        return $this->belongsTo(UserRequest::class);
     }
 
     /**

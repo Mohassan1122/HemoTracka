@@ -19,6 +19,7 @@ class Donor extends Model
         'organization_id',
         'first_name',
         'last_name',
+        'other_names',
         'blood_group',
         'genotype',
         'height',
@@ -28,6 +29,8 @@ class Donor extends Model
         'phone',
         'notes',
         'status',
+        'instagram_handle',
+        'twitter_handle',
     ];
 
     protected $casts = [

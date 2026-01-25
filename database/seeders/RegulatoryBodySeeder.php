@@ -21,9 +21,9 @@ class RegulatoryBodySeeder extends Seeder
     public function run(): void
     {
         // Get some states for regulatory bodies
-        $lagosState = State::where('code', 'LA')->first();
-        $abujaState = State::where('code', 'NG')->first(); // Niger for North-Central
-        $kanosState = State::where('code', 'KN')->first();
+        $lagosState = State::where('state_code', 'LA')->first();
+        $abujaState = State::where('state_code', 'NG')->first(); // Niger for North-Central
+        $kanosState = State::where('state_code', 'KN')->first();
 
         if (!$lagosState || !$abujaState || !$kanosState) {
             $this->command->warn('States not found. Please run StateSeeder first.');

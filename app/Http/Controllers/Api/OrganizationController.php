@@ -65,9 +65,20 @@ class OrganizationController extends Controller
      */
     public function show(Organization $organization): JsonResponse
     {
-        return response()->json([
-            'organization' => $organization->load(['users', 'inventoryItems']),
-        ]);
+        try {
+            // Load only relationships that exist
+            $organization->loadMissing(['inventoryItems']);
+
+            return response()->json([
+                'organization' => $organization,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to fetch organization: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch organization details',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

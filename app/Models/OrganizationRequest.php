@@ -16,6 +16,7 @@ class OrganizationRequest extends Model
         'blood_request_id',
         'organization_id',
         'request_source',
+        'status',
         'is_read',
     ];
 

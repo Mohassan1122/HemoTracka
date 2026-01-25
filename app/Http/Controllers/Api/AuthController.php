@@ -68,6 +68,9 @@ class AuthController extends Controller
                     'genotype' => $donor->genotype,
                     'height' => $donor->height,
                     'address' => $donor->address,
+                    'other_names' => $donor->other_names,
+                    'instagram_handle' => $donor->instagram_handle,
+                    'twitter_handle' => $donor->twitter_handle,
                     'total_donations' => $donor->total_units_donated,
                     'next_eligible_date' => $donor->next_eligible_date,
                     'is_active' => $donor->is_active,
@@ -430,6 +433,9 @@ class AuthController extends Controller
                 'genotype' => ['sometimes', 'string', 'max:10'],
                 'height' => ['sometimes', 'string', 'max:10'],
                 'notes' => ['sometimes', 'string'],
+                'other_names' => ['sometimes', 'string', 'max:255'],
+                'instagram_handle' => ['sometimes', 'string', 'max:255'],
+                'twitter_handle' => ['sometimes', 'string', 'max:255'],
             ]);
         }
 
@@ -470,7 +476,10 @@ class AuthController extends Controller
                     'date_of_birth',
                     'address',
                     'phone',
-                    'notes'
+                    'notes',
+                    'other_names',
+                    'instagram_handle',
+                    'twitter_handle',
                 ]);
             }, ARRAY_FILTER_USE_KEY);
 

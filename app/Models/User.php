@@ -29,7 +29,6 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var array<int, string>
      */
     protected $fillable = [
-        'organization_id',
         'first_name',
         'last_name',
         'email',
@@ -69,11 +68,6 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $appends = [
         'profile_picture_url',
     ];
-
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
 
     /**
      * Get the organization owned by this user (for new auth system).

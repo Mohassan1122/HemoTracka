@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,14 +13,9 @@ return new class extends Migration
         Schema::create('states', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('code', 10)->unique(); // e.g., "LA", "CA"
+            $table->string('state_code', 10)->unique(); // Changed from 'code' - PostgreSQL reserved word
             $table->string('region')->nullable(); // e.g., "South", "North"
             $table->timestamps();
-        });
-
-        // Seed basic Nigerian states
-        Schema::table('states', function (Blueprint $table) {
-            // We'll seed these after migration
         });
     }
 

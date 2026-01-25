@@ -106,3 +106,12 @@ A key feature of HemoTracka is its robust **Entity Authentication System**.
 
 ---
 *Created by the HemoTracka Development Team.*
+
+
+
+
+
+
+
+
+ 

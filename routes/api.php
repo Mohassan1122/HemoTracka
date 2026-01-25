@@ -137,6 +137,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Messages
     Route::prefix('messages')->group(function () {
+        Route::get('/conversations', [MessageController::class, 'conversations']);
+        Route::get('/search-users', [MessageController::class, 'searchUsers']);
+        Route::get('/chat/{otherUserId}', [MessageController::class, 'chat']);
+        Route::post('/send/{otherUserId}', [MessageController::class, 'sendToUser']);
         Route::get('/inbox', [MessageController::class, 'inbox']);
         Route::get('/sent', [MessageController::class, 'sent']);
         Route::get('/unread-count', [MessageController::class, 'unreadCount']);
@@ -168,6 +172,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/messages/send/{otherUser}', [MobileMessageController::class, 'send']);
     });
 
+    // Shared Organization Routes
+    Route::get('/organizations/{organization}', [OrganizationController::class, 'show']);
+
     // =========================================================================
     // BLOOD REQUEST ROUTES (Accessible to all authenticated users)
     // =========================================================================
@@ -190,6 +197,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DonorController::class, 'dashboard']);
         Route::get('/eligibility', [DonorController::class, 'eligibility']);
         Route::get('/donations', [DonorController::class, 'donations']);
+        Route::get('/donations/history', [DonationController::class, 'donorHistory']);
         Route::get('/badges', [DonorBadgeController::class, 'donorBadges']);
         Route::post('/check-badges', [DonorBadgeController::class, 'checkAndAward']);
         Route::post('/upload-profile-picture', [DonorController::class, 'uploadProfilePicture']);
@@ -249,8 +257,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================================================================
     Route::prefix('blood-bank')->group(function () {
         Route::get('/dashboard', [BloodBankController::class, 'dashboard']);
+        Route::get('/dashboard/stats', [BloodBankController::class, 'getDashboardStats']);
         Route::get('/inventory', [BloodBankController::class, 'inventory']);
         Route::get('/donations', [BloodBankController::class, 'donations']);
+        Route::get('/appointments', [AppointmentController::class, 'index']);
+        Route::patch('/appointments/{appointment}', [AppointmentController::class, 'update']);
+        Route::get('/donors/{id}', [BloodBankController::class, 'getDonor']);
         Route::put('/donors/{id}/health', [BloodBankController::class, 'updateDonorHealth']);
         Route::get('/requests', [BloodBankController::class, 'requests']);
         Route::post('/requests/{id}/accept', [BloodBankController::class, 'acceptRequest']);

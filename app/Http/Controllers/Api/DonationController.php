@@ -39,6 +39,25 @@ class DonationController extends Controller
     }
 
     /**
+     * Get donation history for the authenticated donor.
+     */
+    public function donorHistory(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->donor) {
+            return response()->json(['message' => 'User is not a donor'], 403);
+        }
+
+        $donations = Donation::where('donor_id', $user->donor->id)
+            ->with('organization')
+            ->latest('donation_date')
+            ->paginate(15);
+
+        return response()->json($donations);
+    }
+
+    /**
      * Store a newly created donation.
      */
     public function store(Request $request): JsonResponse

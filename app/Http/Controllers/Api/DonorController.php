@@ -140,8 +140,15 @@ class DonorController extends Controller
     /**
      * Get donor dashboard data.
      */
-    public function dashboard(Donor $donor): JsonResponse
+    public function dashboard(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $donor = $user->donor;
+
+        if (!$donor) {
+            return response()->json(['message' => 'Donor profile not found for this user.'], 404);
+        }
+
         $donor->load(['donations', 'badges', 'appointments']);
 
         $recentDonations = $donor->donations()
@@ -163,7 +170,7 @@ class DonorController extends Controller
         return response()->json([
             'donor' => [
                 'id' => $donor->id,
-                'name' => $donor->full_name,
+                'name' => $user->full_name,
                 'blood_group' => $donor->blood_group,
                 'status' => $donor->status,
             ],
@@ -172,6 +179,7 @@ class DonorController extends Controller
                 'total_units_donated' => $donor->total_units_donated,
                 'total_badges' => $badges->count(),
                 'total_points' => $donor->total_points,
+                'global_donations_count' => \App\Models\Donation::count(),
             ],
             'eligibility' => [
                 'is_eligible' => $donor->isEligibleToDonate(),

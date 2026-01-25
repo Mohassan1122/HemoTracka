@@ -61,9 +61,6 @@ class BloodRequestController extends Controller
         if (get_class($auth) === 'App\Models\Organization') {
             // Authenticated as Organization directly (existing pattern)
             $organizationId = $auth->id;
-        } elseif ($auth->organization_id) {
-            // Authenticated as User with organization_id (staff pattern)
-            $organizationId = $auth->organization_id;
         } elseif ($auth->linkedOrganization) {
             // Authenticated as User who owns an organization (new pattern)
             $organizationId = $auth->linkedOrganization->id;
@@ -105,7 +102,6 @@ class BloodRequestController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'organization_id' => ['required', 'exists:organizations,id'],
             'type' => ['required', 'in:Blood,Platelets,Bone Marrow'],
             'request_source' => ['required', 'in:donors,blood_banks,both'],
             'blood_group' => ['required_if:type,Blood', 'nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
@@ -121,6 +117,16 @@ class BloodRequestController extends Controller
         $validated['status'] = 'Pending';
         if (!isset($validated['is_emergency'])) {
             $validated['is_emergency'] = false;
+        }
+
+        // Resolve organization ID from authenticated user
+        $user = $request->user();
+        if ($user->linkedOrganization) {
+            $validated['organization_id'] = $user->linkedOrganization->id;
+        } else {
+            return response()->json([
+                'message' => 'User is not linked to any organization. Cannot create blood request.',
+            ], 403);
         }
 
         $bloodRequest = BloodRequest::create($validated);

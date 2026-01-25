@@ -25,8 +25,12 @@ class AppointmentController extends Controller
         }
 
         // If user belongs to an organization, show that org's appointments
-        if ($user->organization_id) {
+        if (get_class($user) === 'App\Models\Organization') {
+            $query->where('organization_id', $user->id);
+        } elseif ($user->organization_id) {
             $query->where('organization_id', $user->organization_id);
+        } elseif ($user->linkedOrganization) {
+            $query->where('organization_id', $user->linkedOrganization->id);
         }
 
         if ($request->has('status')) {
@@ -54,14 +58,23 @@ class AppointmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'donor_id' => ['required', 'exists:donors,id'],
             'organization_id' => ['required', 'exists:organizations,id'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['required', 'date_format:H:i'],
-            'donation_type' => ['nullable', 'in:Whole Blood,Plasma,Platelets,Double Red Cells'],
+            'donation_type' => ['nullable', 'string'],
             'type' => ['nullable', 'in:Walk-in,Scheduled'],
+            'user_request_id' => ['nullable', 'exists:users_requests,id'],
+            'blood_group' => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'genotype' => ['nullable', 'in:AA,AS,SS,AC'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        $user = $request->user();
+        if (!$user->donor) {
+            return response()->json(['message' => 'User is not a donor.'], 403);
+        }
+
+        $validated['donor_id'] = $user->donor->id;
 
         // Check organization is a Blood Bank
         $organization = Organization::findOrFail($validated['organization_id']);
@@ -115,11 +128,54 @@ class AppointmentController extends Controller
             'cancellation_reason' => ['nullable', 'string'],
         ]);
 
+        // Require cancellation reason for rejections
+        if (isset($validated['status']) && $validated['status'] === 'Cancelled') {
+            if (empty($validated['cancellation_reason'])) {
+                return response()->json([
+                    'message' => 'Cancellation reason is required when rejecting an appointment',
+                ], 422);
+            }
+        }
+
+        $user = $request->user();
+        $oldStatus = $appointment->status;
+        $newStatus = $validated['status'] ?? $oldStatus;
+
+        // Track who made the change
+        $validated['updated_by'] = $user->id;
+
+        // Track confirmation
+        if ($newStatus === 'Confirmed' && $oldStatus !== 'Confirmed') {
+            $validated['accepted_by'] = $user->id;
+            $validated['accepted_at'] = now();
+            $action = 'confirmed';
+            $message = 'Your blood donation appointment has been confirmed!';
+        }
+
+        // Track cancellation/rejection
+        if ($newStatus === 'Cancelled' && $oldStatus !== 'Cancelled') {
+            $validated['rejected_by'] = $user->id;
+            $validated['rejected_at'] = now();
+            $action = 'cancelled';
+            $message = 'Your blood donation appointment has been cancelled.';
+        }
+
         $appointment->update($validated);
+
+        // Send notification to donor if status changed
+        if (isset($action) && $appointment->donor && $appointment->donor->user) {
+            try {
+                $appointment->donor->user->notify(
+                    new \App\Notifications\AppointmentNotification($appointment, $action, $message)
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to send appointment notification: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'message' => 'Appointment updated successfully',
-            'appointment' => $appointment->fresh()->load(['donor', 'organization']),
+            'appointment' => $appointment->fresh()->load(['donor.user', 'organization']),
         ]);
     }
 

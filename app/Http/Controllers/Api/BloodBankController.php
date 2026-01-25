@@ -22,31 +22,55 @@ class BloodBankController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         $user = $request->user();
-        $orgId = $user->organization_id;
+        if (!$user->organization_id) {
+            // Handle case where user might be an organization directly (old logic) or just fallback
+            $orgId = $user->id; // Assuming user IS the organization model in some contexts, but let's be safe
+            if (get_class($user) !== 'App\Models\Organization') {
+                // Try linked organization
+                $orgId = $user->linkedOrganization ? $user->linkedOrganization->id : null;
+            }
+        } else {
+            $orgId = $user->organization_id;
+        }
+
+        if (!$orgId) {
+            return response()->json(['message' => 'No organization found'], 404);
+        }
 
         $stats = [
             'total_stock' => InventoryItem::where('organization_id', $orgId)->sum('units_in_stock'),
             'out_of_stock' => InventoryItem::where('organization_id', $orgId)->where('units_in_stock', 0)->count(),
+            // Incoming stock are approved requests that are in transit/delivery
             'incoming_stock' => BloodRequest::where('organization_id', $orgId)->where('status', 'In Transit')->sum('units_needed'),
-            'pending_requests' => BloodRequest::where('status', 'Pending')->count(), // Global pending for others to see? No, probably filtered or related to specific needs.
-            'accepted_requests' => BloodRequest::where('status', 'Approved')->whereHas('delivery', function ($q) use ($orgId) {
-                // Simplified: requests we are fulfilling
+            // Requests sent TO this blood bank
+            'pending_requests' => \App\Models\OrganizationRequest::where('organization_id', $orgId)->whereHas('bloodRequest', function ($q) {
+                $q->where('status', 'Pending');
+            })->count(),
+            'accepted_requests' => BloodRequest::whereHas('offers', function ($q) use ($orgId) {
+                $q->where('organization_id', $orgId)->where('status', 'Accepted');
             })->count(),
         ];
 
-        $recentRequests = BloodRequest::where('status', 'Pending')
-            ->with('organization')
+        // Recent Requests: Fetch OrganizationRequests for this org where the underlying blood request is Pending
+        $recentRequests = \App\Models\OrganizationRequest::where('organization_id', $orgId)
+            ->whereHas('bloodRequest', function ($q) {
+                $q->where('status', 'Pending');
+            })
+            ->with(['bloodRequest.organization.user']) // Load requester's user for messaging
             ->latest()
             ->limit(5)
             ->get();
 
         $recentDeliveries = Delivery::whereHas('bloodRequest', function ($q) use ($orgId) {
-            $q->where('organization_id', $orgId);
+            $q->where('organization_id', $orgId); // Deliveries FOR requests made BY this org? Or deliveries FULFILLED by this org? 
+            // Usually dashboard shows outbound deliveries if you are a blood bank fulfilling requests. 
+            // "My Requests" (inbound) logic might differ. 
+            // For now, let's assume this shows deliveries relevant to the org's operations.
         })->with(['bloodRequest', 'rider.user'])->latest()->limit(5)->get();
 
         return response()->json([
             'stats' => $stats,
-            'recent_requests' => $recentRequests,
+            'recent_requests' => $recentRequests, // This now contains OrganizationRequest objects wrapping BloodRequest
             'recent_deliveries' => $recentDeliveries,
             'quick_actions' => [
                 ['title' => 'Manage Inventory', 'icon' => 'database', 'route' => 'blood-bank.inventory'],
@@ -96,6 +120,60 @@ class BloodBankController extends Controller
     }
 
     /**
+     * Get Dashboard Statistics for Blood Bank
+     */
+    public function getDashboardStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->load('linkedOrganization');
+
+        // Get the blood bank organization ID
+        $organizationId = null;
+        if ($user->role === 'blood_banks') {
+            $organizationId = $user->linkedOrganization?->id;
+        }
+
+        if (!$organizationId) {
+            return response()->json([
+                'message' => 'Blood bank organization not found',
+                'recent_requests' => []
+            ], 404);
+        }
+
+        // Get recent requests sent to this blood bank (limit to 5)
+        $recentRequests = \App\Models\OrganizationRequest::where('organization_id', $organizationId)
+            ->where('status', 'Pending')
+            ->with(['bloodRequest.organization'])
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(function ($orgRequest) {
+                $bloodRequest = $orgRequest->bloodRequest;
+                if (!$bloodRequest)
+                    return null;
+
+                return [
+                    'id' => $orgRequest->id,
+                    'blood_request_id' => $bloodRequest->id,
+                    'blood_group' => $bloodRequest->blood_group,
+                    'units_requested' => $bloodRequest->units_requested,
+                    'urgency_level' => $bloodRequest->urgency_level,
+                    'request_type' => $bloodRequest->request_type,
+                    'reason' => $bloodRequest->reason,
+                    'patient_name' => $bloodRequest->patient_name,
+                    'status' => $orgRequest->status,
+                    'organization' => $bloodRequest->organization,
+                    'created_at' => $bloodRequest->created_at,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        return response()->json([
+            'recent_requests' => $recentRequests,
+        ]);
+    }
+    /**
      * Donation history / Medical records
      */
     public function donations(Request $request): JsonResponse
@@ -108,6 +186,34 @@ class BloodBankController extends Controller
             ->paginate(10);
 
         return response()->json($donations);
+    }
+
+    /**
+     * Get Donor Details
+     */
+    public function getDonor($id): JsonResponse
+    {
+        $donor = Donor::with('user')->findOrFail($id);
+
+        return response()->json([
+            'donor' => [
+                'id' => $donor->id,
+                'first_name' => $donor->first_name,
+                'last_name' => $donor->last_name,
+                'other_names' => $donor->other_names,
+                'email' => $donor->user->email ?? null,
+                'phone' => $donor->phone,
+                'blood_group' => $donor->blood_group,
+                'genotype' => $donor->genotype,
+                'height' => $donor->height,
+                'date_of_birth' => $donor->date_of_birth,
+                'address' => $donor->address,
+                'last_donation_date' => $donor->last_donation_date,
+                'status' => $donor->status,
+                'instagram_handle' => $donor->instagram_handle,
+                'twitter_handle' => $donor->twitter_handle,
+            ]
+        ]);
     }
 
     /**
@@ -133,18 +239,66 @@ class BloodBankController extends Controller
     }
 
     /**
-     * List Pending/Accepted requests
+     * List Pending/Accepted requests for the authenticated blood bank
      */
     public function requests(Request $request): JsonResponse
     {
-        $status = $request->query('status', 'Pending');
+        $user = $request->user();
+        $user->load('linkedOrganization');
 
-        $requests = BloodRequest::where('status', $status)
-            ->with('organization')
-            ->latest()
-            ->paginate(10);
+        // Get the blood bank organization ID
+        $organizationId = null;
+        if ($user->role === 'blood_banks') {
+            $organizationId = $user->linkedOrganization?->id;
+        }
 
-        return response()->json($requests);
+        if (!$organizationId) {
+            return response()->json([
+                'message' => 'Blood bank organization not found',
+                'data' => []
+            ], 404);
+        }
+
+        $status = $request->query('status');
+
+        // Get requests through OrganizationRequest pivot table
+        $query = \App\Models\OrganizationRequest::where('organization_id', $organizationId)
+            ->with(['bloodRequest.organization']);
+
+        // Filter by status if provided
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $requests = $query->latest()
+            ->paginate(20);
+
+        // Transform the data to match frontend expectations
+        $transformedData = collect($requests->items())->map(function ($orgRequest) {
+            $bloodRequest = $orgRequest->bloodRequest;
+            if (!$bloodRequest)
+                return null;
+
+            return [
+                'id' => $bloodRequest->id,
+                'blood_group' => $bloodRequest->blood_group,
+                'units_requested' => $bloodRequest->units_requested,
+                'urgency_level' => $bloodRequest->urgency_level,
+                'request_type' => $bloodRequest->request_type,
+                'reason' => $bloodRequest->reason,
+                'patient_name' => $bloodRequest->patient_name,
+                'status' => $orgRequest->status,
+                'organization' => $bloodRequest->organization,
+                'created_at' => $bloodRequest->created_at,
+            ];
+        })->filter(); // Remove nulls
+
+        return response()->json([
+            'data' => $transformedData->values(),
+            'current_page' => $requests->currentPage(),
+            'last_page' => $requests->lastPage(),
+            'total' => $requests->total(),
+        ]);
     }
 
     /**
