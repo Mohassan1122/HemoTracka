@@ -7,6 +7,11 @@ use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\DonorController;
 use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\InventoryAlertController;
+use App\Http\Controllers\Api\StorageLocationController;
+use App\Http\Controllers\Api\InventoryAnalyticsController;
+use App\Http\Controllers\Api\QualityControlController;
+use App\Http\Controllers\Api\ComponentSeparationController;
 use App\Http\Controllers\Api\BloodRequestController;
 use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Api\MessageController;
@@ -187,6 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('user-requests')->group(function () {
         Route::get('/', [BloodRequestController::class, 'myRequests']);
         Route::get('/stats', [BloodRequestController::class, 'requestStats']);
+        Route::get('/{userRequest}', [BloodRequestController::class, 'showUserRequest']);
         Route::post('/{userRequest}/mark-as-read', [BloodRequestController::class, 'markAsRead']);
     });
 
@@ -262,6 +268,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/donations', [BloodBankController::class, 'donations']);
         Route::get('/appointments', [AppointmentController::class, 'index']);
         Route::patch('/appointments/{appointment}', [AppointmentController::class, 'update']);
+        Route::post('/appointments/{appointment}/record-donation', [BloodBankController::class, 'recordDonation']);
         Route::get('/donors/{id}', [BloodBankController::class, 'getDonor']);
         Route::put('/donors/{id}/health', [BloodBankController::class, 'updateDonorHealth']);
         Route::get('/requests', [BloodBankController::class, 'requests']);
@@ -279,16 +286,52 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my-requests/stats', [BloodBankController::class, 'requestStats']);
         Route::post('/my-requests/{id}/mark-as-read', [BloodBankController::class, 'markRequestAsRead']);
 
+        // Storage Locations
+        Route::apiResource('inventory/locations', StorageLocationController::class);
+
         // Inventory management
         Route::get('/inventory/summary', [InventoryController::class, 'summary']);
         Route::post('/inventory/{inventoryItem}/adjust-stock', [InventoryController::class, 'adjustStock']);
         Route::apiResource('inventory', InventoryController::class)->parameters(['inventory' => 'inventoryItem']);
 
+        // Inventory Alerts
+        Route::get('/inventory-alerts', [InventoryAlertController::class, 'index']);
+        Route::get('/inventory-alerts/unread-count', [InventoryAlertController::class, 'unreadCount']);
+        Route::get('/inventory-alerts/summary', [InventoryAlertController::class, 'summary']);
+        Route::post('/inventory-alerts/check', [InventoryAlertController::class, 'checkAlerts']);
+        Route::post('/inventory-alerts/mark-all-read', [InventoryAlertController::class, 'markAllAsRead']);
+        Route::patch('/inventory-alerts/{alert}/read', [InventoryAlertController::class, 'markAsRead']);
+        Route::post('/inventory-alerts/{alert}/acknowledge', [InventoryAlertController::class, 'acknowledge']);
+        Route::delete('/inventory-alerts/{alert}', [InventoryAlertController::class, 'destroy']);
+
+        // Analytics
+        Route::prefix('analytics')->group(function () {
+            Route::get('/summary', [InventoryAnalyticsController::class, 'summary']);
+            Route::get('/by-blood-group', [InventoryAnalyticsController::class, 'byBloodGroup']);
+            Route::get('/by-type', [InventoryAnalyticsController::class, 'byType']);
+            Route::get('/expiry-timeline', [InventoryAnalyticsController::class, 'expiryTimeline']);
+            Route::get('/alerts-summary', [InventoryAnalyticsController::class, 'alertsSummary']);
+            Route::get('/stock-history', [InventoryAnalyticsController::class, 'stockHistory']);
+        });
+
+        // Quality Control
+        Route::get('/quality-control/pending', [QualityControlController::class, 'pending']);
+        Route::get('/quality-control/stats', [QualityControlController::class, 'stats']);
+        Route::put('/quality-control/{inventoryItem}/status', [QualityControlController::class, 'updateStatus']);
+
+        // Component Separation
+        Route::post('/inventory/{inventoryItem}/separate', [ComponentSeparationController::class, 'separate']);
+        Route::get('/inventory/{inventoryItem}/components', [ComponentSeparationController::class, 'getComponents']);
+
         // Request approval
         Route::post('/blood-requests/{bloodRequest}/approve', [BloodRequestController::class, 'approve']);
 
         // Multi-Offer system (Blood Bank side)
+        Route::get('/blood-requests/{bloodRequest}/offers', [OfferController::class, 'index']);
+        Route::get('/blood-requests/{bloodRequest}/check-offer', [OfferController::class, 'checkUserOffer']);
         Route::post('/blood-requests/{bloodRequest}/submit-offer', [OfferController::class, 'store']);
+        Route::post('/offers/{offer}/accept', [OfferController::class, 'accept']);
+        Route::post('/offers/{offer}/reject', [OfferController::class, 'reject']);
     });
 
     // Subscriptions (Available to all authenticated users)

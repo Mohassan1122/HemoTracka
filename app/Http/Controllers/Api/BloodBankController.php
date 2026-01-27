@@ -17,21 +17,30 @@ use Illuminate\Support\Facades\DB;
 class BloodBankController extends Controller
 {
     /**
+     * Helper to get organization ID
+     */
+    private function getOrganizationId($user)
+    {
+        if (isset($user->organization_id) && $user->organization_id) {
+            return $user->organization_id;
+        }
+
+        if (get_class($user) === 'App\Models\Organization') {
+            return $user->id;
+        }
+
+        if ($user->linkedOrganization) {
+            return $user->linkedOrganization->id;
+        }
+
+        return null;
+    }
+    /**
      * Dashboard stats for Blood Bank
      */
     public function dashboard(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!$user->organization_id) {
-            // Handle case where user might be an organization directly (old logic) or just fallback
-            $orgId = $user->id; // Assuming user IS the organization model in some contexts, but let's be safe
-            if (get_class($user) !== 'App\Models\Organization') {
-                // Try linked organization
-                $orgId = $user->linkedOrganization ? $user->linkedOrganization->id : null;
-            }
-        } else {
-            $orgId = $user->organization_id;
-        }
+        $orgId = $this->getOrganizationId($request->user());
 
         if (!$orgId) {
             return response()->json(['message' => 'No organization found'], 404);
@@ -58,7 +67,7 @@ class BloodBankController extends Controller
             })
             ->with(['bloodRequest.organization.user']) // Load requester's user for messaging
             ->latest()
-            ->limit(5)
+            ->limit(3)
             ->get();
 
         $recentDeliveries = Delivery::whereHas('bloodRequest', function ($q) use ($orgId) {
@@ -85,7 +94,14 @@ class BloodBankController extends Controller
      */
     public function inventory(Request $request): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
+        $orgId = $this->getOrganizationId($request->user());
+
+        if (!$orgId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organization not found'
+            ], 404);
+        }
 
         $items = InventoryItem::where('organization_id', $orgId)->get();
 
@@ -156,7 +172,7 @@ class BloodBankController extends Controller
                     'id' => $orgRequest->id,
                     'blood_request_id' => $bloodRequest->id,
                     'blood_group' => $bloodRequest->blood_group,
-                    'units_requested' => $bloodRequest->units_requested,
+                    'units_requested' => $bloodRequest->units_needed,
                     'urgency_level' => $bloodRequest->urgency_level,
                     'request_type' => $bloodRequest->request_type,
                     'reason' => $bloodRequest->reason,
@@ -178,7 +194,14 @@ class BloodBankController extends Controller
      */
     public function donations(Request $request): JsonResponse
     {
-        $orgId = $request->user()->organization_id;
+        $orgId = $this->getOrganizationId($request->user());
+
+        if (!$orgId) {
+            return response()->json([
+                'message' => 'Organization not found',
+                'data' => []
+            ], 404);
+        }
 
         $donations = Donation::where('organization_id', $orgId)
             ->with('donor')
@@ -243,14 +266,7 @@ class BloodBankController extends Controller
      */
     public function requests(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $user->load('linkedOrganization');
-
-        // Get the blood bank organization ID
-        $organizationId = null;
-        if ($user->role === 'blood_banks') {
-            $organizationId = $user->linkedOrganization?->id;
-        }
+        $organizationId = $this->getOrganizationId($request->user());
 
         if (!$organizationId) {
             return response()->json([
@@ -282,7 +298,7 @@ class BloodBankController extends Controller
             return [
                 'id' => $bloodRequest->id,
                 'blood_group' => $bloodRequest->blood_group,
-                'units_requested' => $bloodRequest->units_requested,
+                'units_requested' => $bloodRequest->units_needed,
                 'urgency_level' => $bloodRequest->urgency_level,
                 'request_type' => $bloodRequest->request_type,
                 'reason' => $bloodRequest->reason,
@@ -307,22 +323,7 @@ class BloodBankController extends Controller
      */
     public function myRequests(Request $request): JsonResponse
     {
-        // Get the authenticated user (could be User or Organization)
-        $auth = $request->user();
-
-        // Determine organization ID based on auth type (supports all patterns)
-        $organizationId = null;
-
-        if (get_class($auth) === 'App\Models\Organization') {
-            // Authenticated as Organization directly (existing pattern)
-            $organizationId = $auth->id;
-        } elseif ($auth->organization_id) {
-            // Authenticated as User with organization_id (staff pattern)
-            $organizationId = $auth->organization_id;
-        } elseif ($auth->linkedOrganization) {
-            // Authenticated as User who owns an organization (new pattern)
-            $organizationId = $auth->linkedOrganization->id;
-        }
+        $organizationId = $this->getOrganizationId($request->user());
 
         if (!$organizationId) {
             return response()->json([
@@ -770,5 +771,124 @@ class BloodBankController extends Controller
             'message' => 'Cover photo uploaded successfully',
             'cover_photo_url' => $organization->cover_photo_url,
         ]);
+    }
+
+    /**
+     * Record a donation from a completed appointment.
+     * This creates a Donation record and updates inventory.
+     */
+    public function recordDonation(Request $request, \App\Models\Appointment $appointment): JsonResponse
+    {
+        // Validate that the appointment belongs to this blood bank
+        $auth = $request->user();
+        $organizationId = null;
+
+        if (get_class($auth) === 'App\Models\Organization') {
+            $organizationId = $auth->id;
+        } elseif ($auth->organization_id) {
+            $organizationId = $auth->organization_id;
+        } elseif ($auth->linkedOrganization) {
+            $organizationId = $auth->linkedOrganization->id;
+        }
+
+        if (!$organizationId || $appointment->organization_id !== $organizationId) {
+            return response()->json([
+                'message' => 'Unauthorized: This appointment does not belong to your organization',
+            ], 403);
+        }
+
+        // Check appointment status - must be Confirmed
+        if ($appointment->status !== 'Confirmed') {
+            return response()->json([
+                'message' => 'Only confirmed appointments can have donations recorded',
+            ], 422);
+        }
+
+        // Validate request data
+        $validated = $request->validate([
+            'units' => ['required', 'integer', 'min:1', 'max:10'],
+            'blood_group' => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'doctor_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Get blood group from appointment or donor or request
+        $bloodGroup = $validated['blood_group']
+            ?? $appointment->blood_group
+            ?? $appointment->donor->blood_group;
+
+        if (!$bloodGroup) {
+            return response()->json([
+                'message' => 'Blood group is required. Please specify in the request.',
+            ], 422);
+        }
+
+        // Start a database transaction
+        \DB::beginTransaction();
+
+        try {
+            // 1. Create the Donation record
+            $donation = Donation::create([
+                'donor_id' => $appointment->donor_id,
+                'organization_id' => $organizationId,
+                'appointment_id' => $appointment->id,
+                'blood_group' => $bloodGroup,
+                'units' => $validated['units'],
+                'donation_date' => now()->toDateString(),
+                'notes' => $appointment->notes,
+                'doctor_notes' => $validated['doctor_notes'] ?? null,
+                'status' => 'Pending', // Will go through screening
+            ]);
+
+            // 2. Update the appointment status to Completed
+            $appointment->update(['status' => 'Completed']);
+
+            // 3. Update donor's last donation date
+            $appointment->donor->update(['last_donation_date' => now()->toDateString()]);
+
+            // 4. Auto-update Inventory (add to stock)
+            $inventoryItem = InventoryItem::firstOrCreate(
+                [
+                    'organization_id' => $organizationId,
+                    'blood_group' => $bloodGroup,
+                    'type' => $appointment->donation_type === 'Platelets' ? 'PLT' : 'Whole Blood',
+                ],
+                [
+                    'units_in_stock' => 0,
+                    'threshold' => 10,
+                ]
+            );
+            $inventoryItem->increment('units_in_stock', $validated['units']);
+
+            // 5. Update UserRequest status if this appointment was from a blood request
+            if ($appointment->user_request_id) {
+                $userRequest = \App\Models\UserRequest::find($appointment->user_request_id);
+                if ($userRequest) {
+                    $userRequest->markAsFulfilled();
+
+                    // 6. Update the BloodRequest units_fulfilled
+                    $bloodRequest = $userRequest->bloodRequest;
+                    if ($bloodRequest) {
+                        $bloodRequest->addFulfilledUnits($validated['units']);
+                    }
+                }
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'message' => 'Donation recorded successfully',
+                'donation' => $donation->load(['donor', 'appointment']),
+                'inventory_updated' => true,
+                'new_stock' => $inventoryItem->fresh()->units_in_stock,
+            ], 201);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Failed to record donation: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Failed to record donation: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

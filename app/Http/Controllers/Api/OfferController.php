@@ -29,6 +29,33 @@ class OfferController extends Controller
     }
 
     /**
+     * Check if the authenticated user/organization has already made an offer.
+     */
+    public function checkUserOffer(BloodRequest $bloodRequest): JsonResponse
+    {
+        $user = Auth::user();
+        $orgId = $user->organization_id ?? $user->linkedOrganization?->id;
+
+        if (!$orgId) {
+            return response()->json([
+                'success' => false,
+                'has_offer' => false,
+                'message' => 'No organization found'
+            ]);
+        }
+
+        $offer = Offer::where('blood_request_id', $bloodRequest->id)
+            ->where('organization_id', $orgId)
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'has_offer' => !!$offer,
+            'offer' => $offer
+        ]);
+    }
+
+    /**
      * Blood Bank submits an offer for a blood request.
      */
     public function store(Request $request, BloodRequest $bloodRequest): JsonResponse
@@ -51,9 +78,16 @@ class OfferController extends Controller
         $cardCharge = $request->card_charge ?? 0;
         $totalAmount = $productFee + $shippingFee + $cardCharge;
 
+        // Resolve organization ID
+        $organizationId = $user->organization_id ?? $user->linkedOrganization?->id;
+
+        if (!$organizationId) {
+            return response()->json(['success' => false, 'message' => 'No organization linked to account'], 400);
+        }
+
         $offer = Offer::create([
             'blood_request_id' => $bloodRequest->id,
-            'organization_id' => $user->organization_id,
+            'organization_id' => $organizationId,
             'product_fee' => $productFee,
             'shipping_fee' => $shippingFee,
             'card_charge' => $cardCharge,
@@ -77,8 +111,10 @@ class OfferController extends Controller
         $user = Auth::user();
         $bloodRequest = $offer->bloodRequest;
 
+        $userOrgId = $user->organization_id ?? $user->linkedOrganization?->id; // Fix: Robust org ID resolution
+
         // Verify that the user belongs to the organization that made the request
-        if ($user->organization_id !== $bloodRequest->organization_id) {
+        if ($userOrgId !== $bloodRequest->organization_id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -97,7 +133,7 @@ class OfferController extends Controller
 
         // 3. Update Blood Request status and financial details
         $bloodRequest->update([
-            'status' => 'Processing',
+            'status' => 'Approved',
             'product_fee' => $offer->product_fee,
             'shipping_fee' => $offer->shipping_fee,
             'card_charge' => $offer->card_charge,
@@ -132,7 +168,9 @@ class OfferController extends Controller
     public function reject(Offer $offer): JsonResponse
     {
         $user = Auth::user();
-        if ($user->organization_id !== $offer->bloodRequest->organization_id) {
+        $userOrgId = $user->organization_id ?? $user->linkedOrganization?->id; // Fix: Robust org ID resolution
+
+        if ($userOrgId !== $offer->bloodRequest->organization_id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 

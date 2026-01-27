@@ -98,6 +98,14 @@ class AppointmentController extends Controller
 
         $appointment = Appointment::create($validated);
 
+        // If this appointment is in response to a blood request, mark UserRequest as Responded
+        if (!empty($validated['user_request_id'])) {
+            $userRequest = \App\Models\UserRequest::find($validated['user_request_id']);
+            if ($userRequest && $userRequest->user_id === $user->id) {
+                $userRequest->markAsResponded();
+            }
+        }
+
         return response()->json([
             'message' => 'Appointment scheduled successfully',
             'appointment' => $appointment->load(['donor', 'organization']),

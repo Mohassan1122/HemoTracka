@@ -37,6 +37,9 @@ class Organization extends Model implements Authenticatable
         'twitter_link',
         'instagram_link',
         'linkedin_link',
+        'receive_notifications',
+        'show_inventory',
+        'show_contact',
         'status',
     ];
 

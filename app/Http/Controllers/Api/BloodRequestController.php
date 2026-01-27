@@ -119,6 +119,11 @@ class BloodRequestController extends Controller
             $validated['is_emergency'] = false;
         }
 
+        // Set urgency level derived from is_emergency if not provided
+        if (!isset($validated['urgency_level'])) {
+            $validated['urgency_level'] = $validated['is_emergency'] ? 'Critical' : 'Normal';
+        }
+
         // Resolve organization ID from authenticated user
         $user = $request->user();
         if ($user->linkedOrganization) {
@@ -386,6 +391,24 @@ class BloodRequestController extends Controller
         return response()->json([
             'message' => 'Request marked as read',
             'user_request' => $userRequest->load('bloodRequest'),
+        ]);
+    }
+
+    /**
+     * Get a single user request by ID.
+     */
+    public function showUserRequest(Request $request, UserRequest $userRequest): JsonResponse
+    {
+        // Check if the user owns this request
+        if ($userRequest->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        return response()->json([
+            'user_request' => $userRequest->load('bloodRequest.organization'),
+            'blood_request' => $userRequest->bloodRequest->load('organization'),
         ]);
     }
 

@@ -37,13 +37,16 @@ class NewBloodRequestNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $name = $notifiable->first_name ?? $notifiable->name ?? 'User';
+        $urgency = $this->bloodRequest->urgency_level ?? ($this->bloodRequest->is_emergency ? 'Critical' : 'Standard');
+
         return (new MailMessage)
             ->subject('New Blood Request - ' . $this->bloodRequest->blood_group)
-            ->greeting('Hello ' . $notifiable->first_name . ',')
+            ->greeting('Hello ' . $name . ',')
             ->line('A new blood request has been submitted.')
             ->line('**Blood Group:** ' . $this->bloodRequest->blood_group)
             ->line('**Units Needed:** ' . $this->bloodRequest->units_needed)
-            ->line('**Urgency:** ' . $this->bloodRequest->urgency_level)
+            ->line('**Urgency:** ' . $urgency)
             ->line('**Needed By:** ' . $this->bloodRequest->needed_by->format('M d, Y H:i'))
             ->action('View Request', url('/api/blood-requests/' . $this->bloodRequest->id))
             ->line('Please review and respond to this request promptly.');

@@ -12,11 +12,17 @@ class UserRequest extends Model
 
     protected $table = 'users_requests';
 
+    // Status constants
+    const STATUS_PENDING = 'Pending';
+    const STATUS_RESPONDED = 'Responded';
+    const STATUS_FULFILLED = 'Fulfilled';
+
     protected $fillable = [
         'blood_request_id',
         'user_id',
         'request_source',
         'is_read',
+        'status',
     ];
 
     protected $casts = [
@@ -48,10 +54,34 @@ class UserRequest extends Model
     }
 
     /**
+     * Mark this request as responded (donor scheduled appointment).
+     */
+    public function markAsResponded(): void
+    {
+        $this->update(['status' => self::STATUS_RESPONDED]);
+    }
+
+    /**
+     * Mark this request as fulfilled (donor completed donation).
+     */
+    public function markAsFulfilled(): void
+    {
+        $this->update(['status' => self::STATUS_FULFILLED]);
+    }
+
+    /**
      * Check if the request has been read.
      */
     public function isRead(): bool
     {
         return (bool) $this->is_read;
+    }
+
+    /**
+     * Check if the donor has responded to this request.
+     */
+    public function hasResponded(): bool
+    {
+        return in_array($this->status, [self::STATUS_RESPONDED, self::STATUS_FULFILLED]);
     }
 }

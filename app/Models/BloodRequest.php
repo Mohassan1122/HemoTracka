@@ -18,6 +18,7 @@ class BloodRequest extends Model
         'blood_group',
         'genotype',
         'units_needed',
+        'units_fulfilled',
         'min_units_bank_can_send',
         'source_type',
         'request_source',
@@ -38,6 +39,7 @@ class BloodRequest extends Model
     protected $casts = [
         'needed_by' => 'datetime',
         'view_count' => 'integer',
+        'units_fulfilled' => 'integer',
     ];
 
     /**
@@ -46,6 +48,41 @@ class BloodRequest extends Model
     public function incrementViewCount(): void
     {
         $this->increment('view_count');
+    }
+
+    /**
+     * Add fulfilled units and check if request is complete.
+     */
+    public function addFulfilledUnits(int $units): void
+    {
+        $this->increment('units_fulfilled', $units);
+        $this->checkFulfillment();
+    }
+
+    /**
+     * Check if the request is fully fulfilled and update status.
+     */
+    public function checkFulfillment(): void
+    {
+        if ($this->units_fulfilled >= $this->units_needed && $this->status !== 'Completed') {
+            $this->update(['status' => 'Completed']);
+        }
+    }
+
+    /**
+     * Get the remaining units needed.
+     */
+    public function getRemainingUnitsAttribute(): int
+    {
+        return max(0, $this->units_needed - ($this->units_fulfilled ?? 0));
+    }
+
+    /**
+     * Check if request is fully fulfilled.
+     */
+    public function isFulfilled(): bool
+    {
+        return ($this->units_fulfilled ?? 0) >= $this->units_needed;
     }
 
     public function organization(): BelongsTo

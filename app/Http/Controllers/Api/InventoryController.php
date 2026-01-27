@@ -12,13 +12,39 @@ class InventoryController extends Controller
     /**
      * Display a listing of inventory items.
      */
+    /**
+     * Helper to get organization ID
+     */
+    private function getOrganizationId($user)
+    {
+        if (isset($user->organization_id) && $user->organization_id) {
+            return $user->organization_id;
+        }
+
+        if (get_class($user) === 'App\Models\Organization') {
+            return $user->id;
+        }
+
+        if ($user->linkedOrganization) {
+            return $user->linkedOrganization->id;
+        }
+
+        return null;
+    }
+
+    /**
+     * Display a listing of inventory items.
+     */
     public function index(Request $request): JsonResponse
     {
-        $query = InventoryItem::with('organization');
+        $orgId = $this->getOrganizationId($request->user());
 
-        if ($request->has('organization_id')) {
-            $query->where('organization_id', $request->organization_id);
+        if (!$orgId) {
+            return response()->json(['data' => []]);
         }
+
+        $query = InventoryItem::with('organization')
+            ->where('organization_id', $orgId);
 
         if ($request->has('blood_group')) {
             $query->where('blood_group', $request->blood_group);
@@ -43,19 +69,56 @@ class InventoryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'organization_id' => ['required', 'exists:organizations,id'],
+            // 'organization_id' removed from required input, resolved server-side
             'blood_group' => ['required', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
-            'type' => ['required', 'in:Whole Blood,RBC,PLT,FFP,Cryo'],
+            'type' => ['required', 'in:Whole Blood,RBC,PLT,FFP,Cryo,Platelets'],
             'units_in_stock' => ['required', 'integer', 'min:0'],
             'threshold' => ['nullable', 'integer', 'min:0'],
             'location' => ['nullable', 'string', 'max:100'],
             'expiry_date' => ['nullable', 'date'],
         ]);
 
-        $item = InventoryItem::create($validated);
+        $orgId = $this->getOrganizationId($request->user());
+
+        if (!$orgId) {
+            return response()->json([
+                'message' => 'User is not associated with any organization',
+            ], 403);
+        }
+
+        $validated['organization_id'] = $orgId;
+
+        // Check if inventory item already exists
+        $item = InventoryItem::where('organization_id', $orgId)
+            ->where('blood_group', $validated['blood_group'])
+            ->where('type', $validated['type'])
+            ->first();
+
+        if ($item) {
+            // Update existing item
+            $item->increment('units_in_stock', $validated['units_in_stock']);
+
+            // Update other fields if provided (optional)
+            if (isset($validated['location'])) {
+                $item->location = $validated['location'];
+            }
+            if (isset($validated['expiry_date'])) {
+                $item->expiry_date = $validated['expiry_date'];
+            }
+            if (isset($validated['threshold'])) {
+                $item->threshold = $validated['threshold'];
+            }
+            $item->save();
+
+            $message = 'Inventory stock updated successfully';
+        } else {
+            // Create new item
+            $item = InventoryItem::create($validated);
+            $message = 'Inventory item created successfully';
+        }
 
         return response()->json([
-            'message' => 'Inventory item created successfully',
+            'message' => $message,
             'item' => $item,
         ], 201);
     }
@@ -63,8 +126,14 @@ class InventoryController extends Controller
     /**
      * Display the specified inventory item.
      */
-    public function show(InventoryItem $inventoryItem): JsonResponse
+    public function show(Request $request, InventoryItem $inventoryItem): JsonResponse
     {
+        $orgId = $this->getOrganizationId($request->user());
+
+        if ($inventoryItem->organization_id !== $orgId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         return response()->json([
             'item' => $inventoryItem->load('organization'),
         ]);
@@ -75,9 +144,15 @@ class InventoryController extends Controller
      */
     public function update(Request $request, InventoryItem $inventoryItem): JsonResponse
     {
+        $orgId = $this->getOrganizationId($request->user());
+
+        if ($inventoryItem->organization_id !== $orgId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'blood_group' => ['sometimes', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
-            'type' => ['sometimes', 'in:Whole Blood,RBC,PLT,FFP,Cryo'],
+            'type' => ['sometimes', 'in:Whole Blood,RBC,PLT,FFP,Cryo,Platelets'],
             'units_in_stock' => ['sometimes', 'integer', 'min:0'],
             'threshold' => ['nullable', 'integer', 'min:0'],
             'location' => ['nullable', 'string', 'max:100'],
@@ -95,8 +170,14 @@ class InventoryController extends Controller
     /**
      * Remove the specified inventory item.
      */
-    public function destroy(InventoryItem $inventoryItem): JsonResponse
+    public function destroy(Request $request, InventoryItem $inventoryItem): JsonResponse
     {
+        $orgId = $this->getOrganizationId($request->user());
+
+        if ($inventoryItem->organization_id !== $orgId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $inventoryItem->delete();
 
         return response()->json([
@@ -109,6 +190,12 @@ class InventoryController extends Controller
      */
     public function adjustStock(Request $request, InventoryItem $inventoryItem): JsonResponse
     {
+        $orgId = $this->getOrganizationId($request->user());
+
+        if ($inventoryItem->organization_id !== $orgId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'adjustment' => ['required', 'integer'],
             'reason' => ['nullable', 'string'],
@@ -135,13 +222,14 @@ class InventoryController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
-        $query = InventoryItem::query();
+        $orgId = $this->getOrganizationId($request->user());
 
-        if ($request->has('organization_id')) {
-            $query->where('organization_id', $request->organization_id);
+        if (!$orgId) {
+            return response()->json(['summary' => []]);
         }
 
-        $summary = $query->selectRaw('blood_group, SUM(units_in_stock) as total_units')
+        $summary = InventoryItem::where('organization_id', $orgId)
+            ->selectRaw('blood_group, SUM(units_in_stock) as total_units')
             ->groupBy('blood_group')
             ->get();
 

@@ -13,6 +13,7 @@ class Donation extends Model
     protected $fillable = [
         'donor_id',
         'organization_id',
+        'appointment_id',
         'blood_group',
         'units',
         'platelets_type',
@@ -34,5 +35,13 @@ class Donation extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Get the appointment this donation was recorded from.
+     */
+    public function appointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class);
     }
 }
