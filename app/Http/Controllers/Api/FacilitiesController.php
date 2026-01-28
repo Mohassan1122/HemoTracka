@@ -354,6 +354,65 @@ class FacilitiesController extends Controller
     }
 
     /**
+     * Get the facility's profile data including donations history.
+     */
+    public function getProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'facilities') {
+            return response()->json([
+                'message' => 'Access denied.',
+            ], 403);
+        }
+
+        $organization = $user->organization ?? $user->linkedOrganization;
+
+        if (!$organization) {
+            return response()->json([
+                'message' => 'No organization associated with this account',
+            ], 404);
+        }
+
+        // Get donations (Medical Records tab data)
+        $donations = \App\Models\Donation::where('organization_id', $organization->id)
+            ->with(['donor.user'])
+            ->latest('donation_date')
+            ->limit(10)
+            ->get()
+            ->map(function ($donation) {
+                return [
+                    'id' => $donation->id,
+                    'name' => $donation->donor->user->full_name ?? 'Unknown',
+                    'bloodDonated' => $donation->blood_group,
+                    'amount' => $donation->units . ' pints',
+                    'date' => $donation->donation_date->format('F j, Y'),
+                    'note' => $donation->doctor_notes ?? $donation->notes ?? 'No notes',
+                ];
+            });
+
+        return response()->json([
+            'organization' => [
+                'name' => $organization->name,
+                'email' => $organization->contact_email ?? $organization->email,
+                'phone' => $organization->phone,
+                'address' => $organization->address,
+                'license_number' => $organization->license_number ?? 'N/A',
+                'date_registered' => $organization->created_at->format('F j, Y'),
+                'logo_url' => $organization->logo_url,
+                'cover_photo_url' => $organization->cover_photo_url,
+                'social_links' => [
+                    'instagram' => $organization->instagram_link,
+                    'twitter' => $organization->twitter_link,
+                    'facebook' => $organization->facebook_link,
+                    'linkedin' => $organization->linkedin_link,
+                ]
+            ],
+            'medical_records' => $donations
+        ]);
+    }
+
+    /**
      * Update the facility's organization profile.
      */
     public function updateProfile(Request $request): JsonResponse

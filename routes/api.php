@@ -234,6 +234,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/users/{staffMember}', [FacilitiesController::class, 'deleteUser']);
 
         // Profile Management
+        Route::get('/profile', [FacilitiesController::class, 'getProfile']);
         Route::put('/profile', [FacilitiesController::class, 'updateProfile']);
         Route::post('/upload-logo', [FacilitiesController::class, 'uploadLogo']);
         Route::post('/upload-cover-photo', [FacilitiesController::class, 'uploadCoverPhoto']);
