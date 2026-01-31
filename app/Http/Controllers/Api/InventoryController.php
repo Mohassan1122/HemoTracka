@@ -237,4 +237,110 @@ class InventoryController extends Controller
             'summary' => $summary,
         ]);
     }
+
+    /**
+     * Import inventory from CSV.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt'],
+        ]);
+
+        $orgId = $this->getOrganizationId($request->user());
+
+        if (!$orgId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $file = $request->file('file');
+        $handle = fopen($file->getPathname(), 'r');
+        // $header = fgetcsv($handle); // Skip header if needed, but robust parser checks content
+
+        $imported = 0;
+        \Illuminate\Support\Facades\DB::beginTransaction();
+
+        try {
+            while (($row = fgetcsv($handle)) !== false) {
+                // Skip empty rows or header rows if they don't look like data
+                if (count($row) < 3)
+                    continue;
+                // Simple header check
+                if (strtolower($row[0]) === 'blood group')
+                    continue;
+
+                $bloodGroup = trim($row[0]);
+                // ... rest of logic ...
+                $type = trim($row[1]);
+                $units = (int) trim($row[2]);
+                $location = isset($row[3]) ? trim($row[3]) : null;
+                $expiryDate = isset($row[4]) ? trim($row[4]) : null;
+
+                if (!in_array($bloodGroup, ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']))
+                    continue;
+
+                $item = InventoryItem::firstOrNew([
+                    'organization_id' => $orgId,
+                    'blood_group' => $bloodGroup,
+                    'type' => $type,
+                ]);
+
+                $item->units_in_stock = ($item->exists ? $item->units_in_stock : 0) + $units;
+                if ($location)
+                    $item->location = $location;
+                if ($expiryDate)
+                    $item->expiry_date = $expiryDate;
+
+                $item->save();
+                $imported++;
+            }
+            \Illuminate\Support\Facades\DB::commit();
+            fclose($handle);
+            return response()->json(['message' => "Imported {$imported} items successfully"]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            fclose($handle);
+            return response()->json(['message' => 'Import failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Export inventory to CSV.
+     */
+    public function export(Request $request)
+    {
+        $orgId = $this->getOrganizationId($request->user());
+        if (!$orgId)
+            return response()->json(['message' => 'Unauthorized'], 403);
+
+        $fileName = 'inventory_' . date('Y-m-d') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($orgId) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Blood Group', 'Type', 'Units', 'Location', 'Threshold', 'Expiry Date', 'Last Updated']);
+            InventoryItem::where('organization_id', $orgId)->chunk(100, function ($items) use ($handle) {
+                foreach ($items as $item) {
+                    fputcsv($handle, [
+                        $item->blood_group,
+                        $item->type,
+                        $item->units_in_stock,
+                        $item->location,
+                        $item->threshold,
+                        $item->expiry_date,
+                        $item->updated_at
+                    ]);
+                }
+            });
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

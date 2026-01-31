@@ -17,14 +17,25 @@ class OfferController extends Controller
      */
     public function index(BloodRequest $bloodRequest): JsonResponse
     {
+        // Fetch offers from Blood Banks
         $offers = $bloodRequest->offers()
             ->with('organization')
             ->orderBy('total_amount', 'asc')
             ->get();
 
+        // Fetch appointments from Donors (via UserRequest)
+        $donorAppointments = \App\Models\Appointment::whereIn('user_request_id', function ($query) use ($bloodRequest) {
+            $query->select('id')
+                ->from('users_requests')
+                ->where('blood_request_id', $bloodRequest->id);
+        })
+            ->with('donor.user')
+            ->get();
+
         return response()->json([
             'success' => true,
-            'data' => $offers
+            'data' => $offers,
+            'donor_appointments' => $donorAppointments
         ]);
     }
 

@@ -349,7 +349,8 @@ class BloodRequestController extends Controller
         $user = $request->user();
 
         $query = UserRequest::with(['bloodRequest.organization', 'bloodRequest.delivery'])
-            ->where('user_id', $user->id);
+            ->where('user_id', $user->id)
+            ->where('status', 'Pending'); // Only show pending requests that haven't been responded to
 
         // Filter by read status
         if ($request->has('is_read')) {

@@ -243,6 +243,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/requests/export', [FacilitiesController::class, 'exportRequests']);
 
         // Appointments (Facilitating availability)
+        Route::get('/appointments', [AppointmentController::class, 'index']);
+        Route::patch('/appointments/{appointment}', [AppointmentController::class, 'update']);
         Route::get('/organizations/{organization}/available-slots', [AppointmentController::class, 'availableSlots']);
 
         // Multi-Offer System
@@ -292,6 +294,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Inventory management
         Route::get('/inventory/summary', [InventoryController::class, 'summary']);
+        Route::get('/inventory/export', [InventoryController::class, 'export']);
+        Route::post('/inventory/import', [InventoryController::class, 'import']);
         Route::post('/inventory/{inventoryItem}/adjust-stock', [InventoryController::class, 'adjustStock']);
         Route::apiResource('inventory', InventoryController::class)->parameters(['inventory' => 'inventoryItem']);
 

@@ -123,6 +123,26 @@ class AuthController extends Controller
             }
         }
 
+        // Add regulatory body data if user is regulatory_body
+        if ($user->role === 'regulatory_body') {
+            $user->load('regulatoryBody');
+            $regBody = $user->regulatoryBody;
+            if ($regBody) {
+                $profileData['regulatory_body'] = [
+                    'id' => $regBody->id,
+                    'institution_name' => $regBody->institution_name,
+                    'license_number' => $regBody->license_number,
+                    'level' => $regBody->level,
+                    'state_id' => $regBody->state_id,
+                    'email' => $regBody->email,
+                    'phone_number' => $regBody->phone_number,
+                    'address' => $regBody->address,
+                    'profile_picture_url' => $regBody->profile_picture_url,
+                    'is_active' => $regBody->is_active,
+                ];
+            }
+        }
+
         return $profileData;
     }
 

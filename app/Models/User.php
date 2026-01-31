@@ -22,6 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public const ROLE_RIDER = 'rider';
     public const ROLE_FACILITIES = 'facilities';
     public const ROLE_BLOOD_BANKS = 'blood_banks';
+    public const ROLE_REGULATORY_BODY = 'regulatory_body';
 
     /**
      * The attributes that are mass assignable.
@@ -88,6 +89,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Rider::class);
     }
 
+    public function regulatoryBody(): HasOne
+    {
+        return $this->hasOne(RegulatoryBody::class);
+    }
+
     public function sentMessages(): HasMany
     {
         return $this->hasMany(Message::class, 'from_user_id');
@@ -146,6 +152,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isBloodBank(): bool
     {
         return $this->role === 'blood_banks';
+    }
+
+    public function isRegulatoryBody(): bool
+    {
+        return $this->role === 'regulatory_body';
     }
 
     /**

@@ -76,12 +76,19 @@ class AppointmentController extends Controller
 
         $validated['donor_id'] = $user->donor->id;
 
-        // Check organization is a Blood Bank
+        // Check organization is a Blood Bank OR a Hospital with a valid request
         $organization = Organization::findOrFail($validated['organization_id']);
+
+        // Allow Blood Banks always, but restrict other types rules
         if ($organization->type !== 'Blood Bank') {
-            return response()->json([
-                'message' => 'Appointments can only be made with Blood Banks',
-            ], 422);
+            // If it's a hospital, we only allow if there is an associated request
+            if ($organization->type === 'Hospital' && !empty($validated['user_request_id'])) {
+                // Allowed (Fulfiling a hospital request)
+            } else {
+                return response()->json([
+                    'message' => 'Direct appointments can only be made with Blood Banks. For Hospitals, please respond to a specific request.',
+                ], 422);
+            }
         }
 
         // Check for conflicting appointments

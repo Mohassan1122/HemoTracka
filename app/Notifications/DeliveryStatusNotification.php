@@ -8,7 +8,9 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\Delivery;
 
-class DeliveryStatusNotification extends Notification implements ShouldQueue
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+
+class DeliveryStatusNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
@@ -31,7 +33,7 @@ class DeliveryStatusNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', 'database', 'broadcast'];
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Notifications\DeliveryStatusNotification;
+use App\Events\DeliveryStatusChanged;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -108,10 +109,16 @@ class DeliveryController extends Controller
 
         $delivery->bloodRequest->update(['status' => 'In Transit']);
 
+        // Broadcast Event
+        event(new DeliveryStatusChanged($delivery, 'Picked Up'));
+
         return response()->json([
             'message' => 'Delivery marked as picked up',
             'delivery' => $delivery->fresh(),
         ]);
+
+        // Broadcast Event
+        event(new DeliveryStatusChanged($delivery, 'Picked Up'));
 
         // Notify Organization
         if ($delivery->bloodRequest && $delivery->bloodRequest->organization) {
@@ -132,10 +139,16 @@ class DeliveryController extends Controller
             'status_history' => $statusHistory,
         ]);
 
+        // Broadcast Event
+        event(new DeliveryStatusChanged($delivery, 'In Transit'));
+
         return response()->json([
             'message' => 'Delivery marked as in transit',
             'delivery' => $delivery->fresh(),
         ]);
+
+        // Broadcast Event
+        event(new DeliveryStatusChanged($delivery, 'In Transit'));
 
         // Notify Organization
         if ($delivery->bloodRequest && $delivery->bloodRequest->organization) {
@@ -159,10 +172,16 @@ class DeliveryController extends Controller
 
         $delivery->bloodRequest->update(['status' => 'Completed']);
 
+        // Broadcast Event
+        event(new DeliveryStatusChanged($delivery, 'Delivered'));
+
         return response()->json([
             'message' => 'Delivery completed successfully',
             'delivery' => $delivery->fresh(),
         ]);
+
+        // Broadcast Event
+        event(new DeliveryStatusChanged($delivery, 'Delivered'));
 
         // Notify Organization
         if ($delivery->bloodRequest && $delivery->bloodRequest->organization) {
