@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         // Add indexes for inventory_items table
         Schema::table('inventory_items', function (Blueprint $table) {
-            $table->index('organization_id');
+            // $table->index('organization_id'); // Exists via foreign key constraint
             $table->index('blood_group');
             $table->index('type');
             $table->index('quality_status');
@@ -24,18 +24,18 @@ return new class extends Migration {
 
         // Add indexes for inventory_alerts table
         Schema::table('inventory_alerts', function (Blueprint $table) {
-            $table->index('organization_id');
+            // $table->index('organization_id'); // Exists via foreign key constraint
             $table->index('severity');
             $table->index('is_read');
             $table->index('is_acknowledged');
-            $table->index(['organization_id', 'is_read']);
+            // $table->index(['organization_id', 'is_read']); // Exists in create table migration
             $table->index(['organization_id', 'severity']);
         });
 
         // Add indexes for storage_locations table
         Schema::table('storage_locations', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('parent_location_id');
+            // $table->index('organization_id'); // Exists via foreign key constraint
+            // $table->index('parent_location_id'); // Exists via foreign key constraint
             $table->index('location_type');
             $table->index(['organization_id', 'parent_location_id']);
         });
