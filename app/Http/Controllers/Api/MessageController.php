@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Events\NewMessageSent;
 use App\Models\Message;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,6 +53,9 @@ class MessageController extends Controller
             'subject' => $validated['subject'] ?? null,
             'body' => $validated['body'],
         ]);
+
+        // Broadcast message for real-time delivery
+        event(new NewMessageSent($message));
 
         return response()->json([
             'message' => 'Message sent successfully',
@@ -262,8 +266,8 @@ class MessageController extends Controller
             'body' => $validated['body'],
         ]);
 
-        // Broadcast message via socket (will implement Socket.IO event)
-        // event(new \App\Events\MessageSent($message));
+        // Broadcast message for real-time delivery
+        event(new NewMessageSent($message));
 
         return response()->json([
             'message' => 'Message sent successfully',

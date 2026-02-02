@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Events\NewMessageSent;
 use App\Models\Message;
 use App\Models\RegulatoryBody;
 use App\Models\Organization;
@@ -150,9 +151,12 @@ class RegulatoryBodyMessagesController extends Controller
 
             $message = Message::create([
                 'from_user_id' => $request->user()->id,
-                'to_user_id' => $request->receiver_id,
-                'body' => $request->content,
+                'to_user_id' => $request->input('receiver_id'),
+                'body' => $request->input('content'),
             ]);
+
+            // Broadcast message for real-time delivery
+            event(new NewMessageSent($message));
 
             return response()->json([
                 'message' => 'Message sent successfully.',
@@ -188,15 +192,18 @@ class RegulatoryBodyMessagesController extends Controller
                 $organization = Organization::find($bloodBankId);
 
                 if ($organization && $organization->user_id) {
-                    $priority = $request->priority ?? 'high';
-                    $bodyContent = "[ALERT - " . strtoupper($priority) . "]\n\n" . $request->content;
+                    $priority = $request->input('priority', 'high');
+                    $bodyContent = "[ALERT - " . strtoupper($priority) . "]\n\n" . $request->input('content');
 
                     $message = Message::create([
                         'from_user_id' => $request->user()->id,
                         'to_user_id' => $organization->user_id,
                         'body' => $bodyContent,
-                        'subject' => $request->title,
+                        'subject' => $request->input('title'),
                     ]);
+
+                    // Broadcast message for real-time delivery
+                    event(new NewMessageSent($message));
 
                     $messages[] = $message;
                 }

@@ -54,17 +54,43 @@ class RegulatoryBodyProfileController extends Controller
         }
 
         try {
-            $regulatoryBody = RegulatoryBody::where('user_id', $request->user()->id)->first();
+            $user = $request->user();
+            $regulatoryBody = RegulatoryBody::where('user_id', $user->id)->first();
 
             if (!$regulatoryBody) {
                 return response()->json(['error' => 'Regulatory body not found.'], 404);
             }
 
-            $regulatoryBody->update($validator->validated());
+            $validatedData = $validator->validated();
+
+            \DB::transaction(function () use ($user, $regulatoryBody, $validatedData) {
+                // Update Regulatory Body Profile
+                $regulatoryBody->update($validatedData);
+
+                // Sync relevant fields to User table
+                $userUpdates = [];
+                if (!empty($validatedData['institution_name'])) {
+                    $userUpdates['first_name'] = $validatedData['institution_name'];
+                }
+                if (!empty($validatedData['email'])) {
+                    $userUpdates['email'] = $validatedData['email'];
+                }
+                if (!empty($validatedData['phone_number'])) {
+                    $userUpdates['phone'] = $validatedData['phone_number'];
+                }
+                if (count($userUpdates) > 0) {
+                    $user->update($userUpdates);
+                }
+            });
+
+            // Refresh models to get updated data
+            $regulatoryBody->refresh();
+            $user->refresh();
 
             return response()->json([
                 'message' => 'Profile updated successfully.',
                 'regulatory_body' => $regulatoryBody->load(['state', 'socialConnections']),
+                'user' => $user->load('regulatoryBody'),
             ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

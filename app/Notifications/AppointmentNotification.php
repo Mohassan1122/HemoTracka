@@ -5,10 +5,12 @@ namespace App\Notifications;
 use App\Models\Appointment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AppointmentNotification extends Notification implements ShouldQueue
+class AppointmentNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
@@ -31,7 +33,7 @@ class AppointmentNotification extends Notification implements ShouldQueue
      */
     public function via($notifiable): array
     {
-        return ['database', 'mail'];
+        return ['database', 'mail', 'broadcast'];
     }
 
     /**
@@ -58,11 +60,29 @@ class AppointmentNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Get the array representation of the notification.
+     * Get the array representation of the notification (for database).
      */
     public function toArray($notifiable): array
     {
+        return $this->getData();
+    }
+
+    /**
+     * Get the broadcast representation of the notification.
+     */
+    public function toBroadcast($notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->getData());
+    }
+
+    /**
+     * Get the notification data.
+     */
+    protected function getData(): array
+    {
         return [
+            'type' => 'appointment_update',
+            'title' => $this->getSubject(),
             'appointment_id' => $this->appointment->id,
             'action' => $this->action,
             'message' => $this->getMessage(),
@@ -72,6 +92,14 @@ class AppointmentNotification extends Notification implements ShouldQueue
             'donation_type' => $this->appointment->donation_type,
             'cancellation_reason' => $this->appointment->cancellation_reason,
         ];
+    }
+
+    /**
+     * Get the type of the notification being broadcast.
+     */
+    public function broadcastType(): string
+    {
+        return 'appointment.' . $this->action;
     }
 
     /**

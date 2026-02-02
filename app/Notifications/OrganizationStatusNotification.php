@@ -5,10 +5,12 @@ namespace App\Notifications;
 use App\Models\Organization;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OrganizationStatusNotification extends Notification implements ShouldQueue
+class OrganizationStatusNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
@@ -31,7 +33,7 @@ class OrganizationStatusNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', 'database', 'broadcast'];
     }
 
     /**
@@ -57,17 +59,43 @@ class OrganizationStatusNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Get the array representation of the notification.
+     * Get the array representation of the notification (for database).
      *
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
+        return $this->getData();
+    }
+
+    /**
+     * Get the broadcast representation of the notification.
+     */
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->getData());
+    }
+
+    /**
+     * Get the notification data.
+     */
+    protected function getData(): array
+    {
         return [
+            'type' => 'organization_status',
+            'title' => 'Account Status Updated',
             'organization_id' => $this->organization->id,
             'status' => $this->status,
             'message' => "Your organization status has been updated to {$this->status}",
             'action_url' => '/settings',
         ];
+    }
+
+    /**
+     * Get the type of the notification being broadcast.
+     */
+    public function broadcastType(): string
+    {
+        return 'organization.status';
     }
 }

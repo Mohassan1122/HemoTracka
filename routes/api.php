@@ -92,6 +92,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard/donation-trends', [RegulatoryBodyDashboardController::class, 'getDonationTrends']);
         Route::get('/dashboard/recent-donors', [RegulatoryBodyDashboardController::class, 'getRecentDonors']);
         Route::get('/dashboard/recent-requests', [RegulatoryBodyDashboardController::class, 'getRecentRequests']);
+        Route::get('/dashboard/demographics', [RegulatoryBodyDashboardController::class, 'getDonorDemographics']);
+        Route::get('/dashboard/supply-demand', [RegulatoryBodyDashboardController::class, 'getBloodSupplyDemand']);
+        Route::get('/dashboard/inventory-expiry', [RegulatoryBodyDashboardController::class, 'getInventoryExpiry']);
+        Route::get('/dashboard/highest-donors', [RegulatoryBodyDashboardController::class, 'getHighestDonors']);
+        Route::get('/dashboard/map-data', [RegulatoryBodyDashboardController::class, 'getBloodInventoryMapData']);
 
         // Compliance Management (PAGE 4)
         Route::get('/compliance/status', [RegulatoryBodyComplianceController::class, 'getComplianceStatus']);
@@ -100,6 +105,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/compliance/filters/locations', [RegulatoryBodyComplianceController::class, 'getFilterLocations']);
         Route::get('/compliance/filters/blood-types', [RegulatoryBodyComplianceController::class, 'getFilterBloodTypes']);
 
+        // Compliance Requests Management (NEW)
+        Route::get('/compliance/requests', [RegulatoryBodyComplianceController::class, 'getComplianceRequests']);
+        Route::get('/compliance/requests/{id}', [RegulatoryBodyComplianceController::class, 'getComplianceRequest']);
+        Route::post('/compliance/requests/{id}/approve', [RegulatoryBodyComplianceController::class, 'approveRequest']);
+        Route::post('/compliance/requests/{id}/reject', [RegulatoryBodyComplianceController::class, 'rejectRequest']);
+
+        // Notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
         // Blood Banks Directory (PAGE 5 & 6)
         Route::get('/blood-banks', [RegulatoryBodyBloodBanksController::class, 'index']);
         Route::get('/blood-banks/{id}', [RegulatoryBodyBloodBanksController::class, 'show']);
@@ -107,11 +126,36 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/blood-banks/{id}/blood-demand-supply', [RegulatoryBodyBloodBanksController::class, 'getBloodDemandSupply']);
         Route::get('/blood-banks/filter/statuses', [RegulatoryBodyBloodBanksController::class, 'getFilterStatuses']);
 
+        // Hospitals/Health Facilities Directory
+        Route::get('/hospitals', [RegulatoryBodyBloodBanksController::class, 'getHospitals']);
+
         // Inventory Management (PAGE 7)
         Route::get('/inventory', [RegulatoryBodyInventoryController::class, 'index']);
         Route::get('/inventory/chart', [RegulatoryBodyInventoryController::class, 'getChart']);
         Route::get('/inventory/export', [RegulatoryBodyInventoryController::class, 'export']);
+        Route::get('/inventory/export/download', [RegulatoryBodyInventoryController::class, 'downloadExport']);
         Route::get('/inventory/stats', [RegulatoryBodyInventoryController::class, 'getStats']);
+
+        // Phase 2: Low Stock Alerts
+        Route::get('/inventory/alerts', [RegulatoryBodyInventoryController::class, 'getAlerts']);
+        Route::post('/inventory/alerts/{id}/acknowledge', [RegulatoryBodyInventoryController::class, 'acknowledgeAlert']);
+
+        // Phase 2: Expiry Tracking
+        Route::get('/inventory/expiring', [RegulatoryBodyInventoryController::class, 'getExpiringItems']);
+
+        // Phase 2: Transfer Visibility
+        Route::get('/transfers', [RegulatoryBodyInventoryController::class, 'getTransfers']);
+        Route::get('/transfers/stats', [RegulatoryBodyInventoryController::class, 'getTransferStats']);
+
+        // Phase 2: Map Visualization
+        Route::get('/inventory/map', [RegulatoryBodyInventoryController::class, 'getMapData']);
+
+        // Phase 2: Automated Reports
+        Route::get('/reports', [RegulatoryBodyInventoryController::class, 'getReports']);
+        Route::get('/reports/schedule', [RegulatoryBodyInventoryController::class, 'getReportSchedule']);
+        Route::put('/reports/schedule', [RegulatoryBodyInventoryController::class, 'updateReportSchedule']);
+        Route::post('/reports/generate', [RegulatoryBodyInventoryController::class, 'generateReport']);
+        Route::get('/reports/download/{filename}', [RegulatoryBodyInventoryController::class, 'downloadReport']);
 
         // Messages (PAGE 8)
         Route::get('/messages', [RegulatoryBodyMessagesController::class, 'getConversations']);

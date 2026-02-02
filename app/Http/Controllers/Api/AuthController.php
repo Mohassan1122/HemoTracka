@@ -305,15 +305,32 @@ class AuthController extends Controller
             'type' => $validated['type'],
             'role' => $role,
             'status' => 'Active',
+            'is_approved' => false, // New registrations require compliance approval
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
         ]);
+
+        // Auto-create compliance request for regulatory body approval
+        try {
+            \App\Models\ComplianceRequest::create([
+                'organization_id' => $organization->id,
+                'organization_type' => $validated['type'],
+                'request_type' => 'registration',
+                'description' => "New {$validated['type']} registration: {$validated['name']}",
+                'priority' => 'normal',
+                'status' => 'pending',
+                'submission_date' => now(),
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail registration
+            \Log::warning('Failed to create compliance request for organization: ' . $organization->id, ['error' => $e->getMessage()]);
+        }
 
         // Create token from User (new auth pattern)
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Organization registration successful.',
+            'message' => 'Organization registration successful. Your registration is pending regulatory approval.',
             'user' => $user->load('linkedOrganization'),
             'organization' => $organization,
             'token' => $token,

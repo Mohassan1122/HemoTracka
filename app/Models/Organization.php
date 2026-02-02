@@ -41,6 +41,7 @@ class Organization extends Model implements Authenticatable
         'show_inventory',
         'show_contact',
         'status',
+        'is_approved',
     ];
 
     /**
@@ -48,6 +49,7 @@ class Organization extends Model implements Authenticatable
      */
     protected $attributes = [
         'status' => 'Active',
+        'is_approved' => false,
     ];
 
     protected $hidden = [
@@ -63,6 +65,7 @@ class Organization extends Model implements Authenticatable
         'operating_hours' => 'array',
         'services' => 'array',
         'password' => 'hashed',
+        'is_approved' => 'boolean',
     ];
 
     protected $appends = [

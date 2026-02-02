@@ -4,11 +4,13 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\BloodRequest;
 
-class NewBloodRequestNotification extends Notification implements ShouldQueue
+class NewBloodRequestNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
@@ -29,7 +31,7 @@ class NewBloodRequestNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', 'database', 'broadcast'];
     }
 
     /**
@@ -53,19 +55,44 @@ class NewBloodRequestNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Get the array representation of the notification.
+     * Get the array representation of the notification (for database).
      *
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
+        return $this->getData();
+    }
+
+    /**
+     * Get the broadcast representation of the notification.
+     */
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->getData());
+    }
+
+    /**
+     * Get the notification data.
+     */
+    protected function getData(): array
+    {
         return [
             'type' => 'new_blood_request',
+            'title' => 'New Blood Request',
             'blood_request_id' => $this->bloodRequest->id,
             'blood_group' => $this->bloodRequest->blood_group,
             'units_needed' => $this->bloodRequest->units_needed,
             'urgency_level' => $this->bloodRequest->urgency_level,
             'message' => 'New blood request for ' . $this->bloodRequest->units_needed . ' units of ' . $this->bloodRequest->blood_group,
         ];
+    }
+
+    /**
+     * Get the type of the notification being broadcast.
+     */
+    public function broadcastType(): string
+    {
+        return 'blood.request.new';
     }
 }

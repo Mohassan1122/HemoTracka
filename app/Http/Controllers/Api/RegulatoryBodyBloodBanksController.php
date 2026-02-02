@@ -36,8 +36,8 @@ class RegulatoryBodyBloodBanksController extends Controller
                 ->select(
                     'id',
                     'name',
+                    'address',
                     'created_at as registration_date',
-                    DB::raw('10000 as capacity'),
                     'status'
                 );
 
@@ -64,6 +64,11 @@ class RegulatoryBodyBloodBanksController extends Controller
 
             // Add additional metrics
             $bloodBanks->getCollection()->transform(function ($bank) {
+                // Calculate capacity from inventory (total units in stock)
+                $bank->capacity = DB::table('inventory_items')
+                    ->where('organization_id', $bank->id)
+                    ->sum('units_in_stock') ?: 0;
+
                 $bank->requests_count = BloodRequest::where('organization_id', $bank->id)->count();
                 $bank->donors_count = Donation::where('organization_id', $bank->id)
                     ->distinct('donor_id')
@@ -78,6 +83,84 @@ class RegulatoryBodyBloodBanksController extends Controller
                     'per_page' => $bloodBanks->perPage(),
                     'total' => $bloodBanks->total(),
                     'last_page' => $bloodBanks->lastPage(),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get list of hospitals (PAGE 5 - Facilities Directory).
+     */
+    public function getHospitals(Request $request): JsonResponse
+    {
+        try {
+            $regulatoryBody = RegulatoryBody::where('user_id', $request->user()->id)->first();
+
+            if (!$regulatoryBody) {
+                return response()->json(['error' => 'Regulatory body not found.'], 404);
+            }
+
+            $page = $request->input('page', 1);
+            $perPage = $request->input('per_page', 10);
+            $search = $request->input('search', '');
+            $status = $request->input('status', '');
+            $hasBloodBank = $request->input('has_blood_bank', null);
+            $sortBy = $request->input('sort_by', 'created_at');
+            $sortOrder = $request->input('sort_order', 'desc');
+
+            $query = Organization::where('type', 'Hospital')
+                ->select(
+                    'id',
+                    'name',
+                    'address',
+                    'created_at as registration_date',
+                    'status'
+                );
+
+            // Apply state filter if state-level regulator
+            if ($regulatoryBody->isState()) {
+                $query->where('state_id', $regulatoryBody->state_id);
+            }
+
+            // Apply search
+            if ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            }
+
+            // Apply status filter
+            if ($status) {
+                $query->where('status', $status);
+            }
+
+            // Filter hospitals with blood banks (have inventory items)
+            if ($hasBloodBank === 'true' || $hasBloodBank === '1') {
+                $query->whereHas('inventoryItems');
+            }
+
+            // Apply sorting
+            $query->orderBy($sortBy, $sortOrder);
+
+            // Get paginated results
+            $hospitals = $query->paginate($perPage, ['*'], 'page', $page);
+
+            // Add additional metrics
+            $hospitals->getCollection()->transform(function ($hospital) {
+                $hospital->requests_count = BloodRequest::where('organization_id', $hospital->id)->count();
+                $hospital->has_blood_bank = DB::table('inventory_items')
+                    ->where('organization_id', $hospital->id)
+                    ->exists();
+                return $hospital;
+            });
+
+            return response()->json([
+                'data' => $hospitals->items(),
+                'pagination' => [
+                    'current_page' => $hospitals->currentPage(),
+                    'per_page' => $hospitals->perPage(),
+                    'total' => $hospitals->total(),
+                    'last_page' => $hospitals->lastPage(),
                 ],
             ], 200);
         } catch (\Exception $e) {
