@@ -264,12 +264,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================================================================
     // 3. FACILITIES ROUTES (/facilities)
     // =========================================================================
-    Route::prefix('facilities')->group(function () {
+    Route::prefix('facilities')->middleware('organization.approved')->group(function () {
         Route::get('/all', [FacilitiesController::class, 'getAllFacilities']);
         Route::get('/dashboard', [FacilitiesController::class, 'dashboard']);
         Route::get('/request-history', [FacilitiesController::class, 'requestHistory']);
         Route::get('/reports', [FacilitiesController::class, 'reportsOverview']);
         Route::get('/inventory-search', [FacilitiesController::class, 'searchBloodInventory']);
+
+        // Inventory Management
+        Route::get('/inventory/summary', [InventoryController::class, 'summary']);
+        Route::post('/inventory/{inventoryItem}/adjust-stock', [InventoryController::class, 'adjustStock']);
+        Route::apiResource('inventory', InventoryController::class)->parameters(['inventory' => 'inventoryItem']);
 
         // Staff Management
         Route::get('/users', [FacilitiesController::class, 'users']);
@@ -308,7 +313,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================================================================
     // 4. BLOOD BANK ROUTES (/blood-bank)
     // =========================================================================
-    Route::prefix('blood-bank')->group(function () {
+    Route::prefix('blood-bank')->middleware('organization.approved')->group(function () {
         Route::get('/dashboard', [BloodBankController::class, 'dashboard']);
         Route::get('/dashboard/stats', [BloodBankController::class, 'getDashboardStats']);
         Route::get('/inventory', [BloodBankController::class, 'inventory']);
@@ -321,6 +326,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/requests', [BloodBankController::class, 'requests']);
         Route::post('/requests/{id}/accept', [BloodBankController::class, 'acceptRequest']);
         Route::get('/deliveries', [BloodBankController::class, 'deliveries']);
+        Route::post('/deliveries/{delivery}/assign', [DeliveryController::class, 'assignRider']);
         Route::post('/requests/{id}/confirm-delivery', [BloodBankController::class, 'confirmDelivery']);
         Route::put('/deliveries/{id}/status', [BloodBankController::class, 'updateDeliveryStatus']);
         Route::match(['get', 'put'], '/settings', [BloodBankController::class, 'settings']);
@@ -376,9 +382,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/blood-requests/{bloodRequest}/approve', [BloodRequestController::class, 'approve']);
 
         // Multi-Offer system (Blood Bank side)
+        Route::get('/my-offers', [OfferController::class, 'getMyOffers']);
         Route::get('/blood-requests/{bloodRequest}/offers', [OfferController::class, 'index']);
         Route::get('/blood-requests/{bloodRequest}/check-offer', [OfferController::class, 'checkUserOffer']);
         Route::post('/blood-requests/{bloodRequest}/submit-offer', [OfferController::class, 'store']);
+        Route::post('/offers/{offer}/accept', [OfferController::class, 'accept']);
         Route::post('/offers/{offer}/accept', [OfferController::class, 'accept']);
         Route::post('/offers/{offer}/reject', [OfferController::class, 'reject']);
     });

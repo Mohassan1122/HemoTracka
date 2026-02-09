@@ -180,6 +180,7 @@ class BloodRequestController extends Controller
                 [
                     'request_source' => $requestSource,
                     'is_read' => false,
+                    'status' => 'Pending',
                 ]
             );
         }

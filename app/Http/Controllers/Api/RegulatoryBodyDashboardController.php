@@ -53,7 +53,7 @@ class RegulatoryBodyDashboardController extends Controller
             if ($regulatoryBody->isFederal()) {
                 $complianceRequests = ComplianceRequest::all();
             } else {
-                $complianceRequests = $complianceRequests->whereHas('regulatoryBody', function ($q) use ($regulatoryBody) {
+                $complianceRequests = $complianceRequests->whereHas('organization', function ($q) use ($regulatoryBody) {
                     $q->where('state_id', $regulatoryBody->state_id);
                 });
             }

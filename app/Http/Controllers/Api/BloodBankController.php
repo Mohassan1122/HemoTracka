@@ -212,6 +212,54 @@ class BloodBankController extends Controller
     }
 
     /**
+     * Get Deliveries for the authenticated Blood Bank (both incoming and outgoing).
+     */
+    public function deliveries(Request $request): JsonResponse
+    {
+        $user = \Auth::user();
+        $orgId = $user->organization_id ?? $user->linkedOrganization?->id;
+
+        if (!$orgId) {
+            return response()->json(['message' => 'No organization found'], 403);
+        }
+
+        $statusGroup = $request->query('type', 'ongoing'); // ongoing or history
+
+        // Fetch deliveries where the organization is the sender (via BloodRequest) OR the receiver (via BloodRequest's organization)
+        // Actually, in the current flow: 
+        // - Sender (Provider) is the one who made the offer (Offer.organization_id = $orgId) -> Pickup Location
+        // - Receiver is the one who made the request (BloodRequest.organization_id) -> Dropoff Location
+
+        // Let's find deliveries linked to offers made by this org
+        // OR deliveries linked to requests made by this org
+
+        $query = Delivery::with(['bloodRequest.organization', 'rider.user'])
+            ->where(function ($q) use ($orgId) {
+                // As Provider (Sender - accepted offer)
+                $q->whereHas('bloodRequest.offers', function ($q2) use ($orgId) {
+                    $q2->where('organization_id', $orgId)
+                        ->where('status', 'Accepted');
+                })
+                    // As Receiver (Requester)
+                    ->orWhereHas('bloodRequest', function ($q2) use ($orgId) {
+                    $q2->where('organization_id', $orgId);
+                });
+            });
+
+        if ($statusGroup === 'ongoing') {
+            $query->whereNotIn('status', ['Delivered', 'Cancelled']);
+        } else {
+            $query->whereIn('status', ['Delivered', 'Cancelled']);
+        }
+
+        return response()->json($query->latest()->paginate(15));
+    }
+
+    /**
+     * Get Donor Details
+     */
+
+    /**
      * Get Donor Details
      */
     public function getDonor($id): JsonResponse
@@ -434,23 +482,7 @@ class BloodBankController extends Controller
         ]);
     }
 
-    /**
-     * Delivery Lifecycle
-     */
-    public function deliveries(Request $request): JsonResponse
-    {
-        $statusGroup = $request->query('type', 'ongoing'); // ongoing or history
 
-        $query = Delivery::with(['bloodRequest.organization', 'rider.user']);
-
-        if ($statusGroup === 'ongoing') {
-            $query->whereNotIn('status', ['Delivered', 'Cancelled']);
-        } else {
-            $query->whereIn('status', ['Delivered', 'Cancelled']);
-        }
-
-        return response()->json($query->latest()->paginate(10));
-    }
 
     /**
      * Assign rider and set fees

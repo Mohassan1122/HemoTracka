@@ -257,7 +257,7 @@ class BloodBankSeeder extends Seeder
         foreach ($allDonors as $donor) {
             UserRequest::updateOrCreate(
                 ['blood_request_id' => $request2->id, 'user_id' => $donor->id],
-                ['request_source' => 'donors', 'is_read' => false]
+                ['request_source' => 'donors', 'is_read' => false, 'status' => 'Pending']
             );
         }
 
@@ -289,7 +289,7 @@ class BloodBankSeeder extends Seeder
         foreach ($allDonors as $donor) {
             UserRequest::updateOrCreate(
                 ['blood_request_id' => $request3->id, 'user_id' => $donor->id],
-                ['request_source' => 'both', 'is_read' => false]
+                ['request_source' => 'both', 'is_read' => false, 'status' => 'Pending']
             );
         }
 

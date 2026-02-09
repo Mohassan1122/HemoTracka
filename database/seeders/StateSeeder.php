@@ -14,11 +14,11 @@ class StateSeeder extends Seeder
     public function run(): void
     {
         $states = [
-            ['name' => 'Lagos', 'state_code' => 'LA', 'region' => 'South West'],
-            ['name' => 'Kano', 'state_code' => 'KN', 'region' => 'North West'],
-            ['name' => 'Rivers', 'state_code' => 'RI', 'region' => 'South South'],
-            ['name' => 'Abuja', 'state_code' => 'AB', 'region' => 'North Central'],
-            ['name' => 'Oyo', 'state_code' => 'OY', 'region' => 'South West'],
+            ['id' => 1, 'name' => 'Lagos', 'state_code' => 'LA', 'region' => 'South West'],
+            ['id' => 2, 'name' => 'Abuja', 'state_code' => 'AB', 'region' => 'North Central'],
+            ['id' => 3, 'name' => 'Kano', 'state_code' => 'KN', 'region' => 'North West'],
+            ['id' => 4, 'name' => 'Rivers', 'state_code' => 'RI', 'region' => 'South South'],
+            ['id' => 5, 'name' => 'Oyo', 'state_code' => 'OY', 'region' => 'South West'],
         ];
 
         foreach ($states as $state) {

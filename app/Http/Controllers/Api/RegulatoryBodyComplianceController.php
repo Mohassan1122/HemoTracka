@@ -14,6 +14,7 @@ use App\Notifications\ComplianceStatusNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class RegulatoryBodyComplianceController extends Controller
@@ -37,23 +38,26 @@ class RegulatoryBodyComplianceController extends Controller
 
             $query = ComplianceRequest::query();
 
-            // Apply regulatory body filter
+            // Apply regulatory body filter for state-level
+            // Apply regulatory body filter for state-level
             if ($regulatoryBody->isState()) {
-                $query->where('regulatory_body_id', $regulatoryBody->id);
+                $query->whereHas('organization', function ($q) use ($regulatoryBody) {
+                    $q->where('state_id', $regulatoryBody->state_id);
+                });
             }
 
             // Apply date range filter
             if ($dateFrom) {
-                $query->where('requested_at', '>=', $dateFrom);
+                $query->where('submission_date', '>=', $dateFrom);
             }
             if ($dateTo) {
-                $query->where('requested_at', '<=', $dateTo);
+                $query->where('submission_date', '<=', $dateTo);
             }
 
             $total = $query->count();
-            $approved = (clone $query)->where('status', 'approved')->count();
-            $pending = (clone $query)->where('status', 'pending')->count();
-            $rejected = (clone $query)->where('status', 'rejected')->count();
+            $approved = (clone $query)->where('status', 'Approved')->count();
+            $pending = (clone $query)->where('status', 'Pending')->count();
+            $rejected = (clone $query)->where('status', 'Rejected')->count();
 
             return response()->json([
                 'total' => $total,
@@ -212,15 +216,23 @@ class RegulatoryBodyComplianceController extends Controller
                 return response()->json(['error' => 'Regulatory body not found.'], 404);
             }
 
-            $perPage = $request->input('per_page', 10);
+            $perPage = (int) $request->input('per_page', 10);
             $status = $request->input('status', '');
             $search = $request->input('search', '');
 
             $query = ComplianceRequest::with(['organization', 'reviewedBy']);
 
+            Log::info('getComplianceRequests called', [
+                'user_id' => $request->user()->id,
+                'is_state' => $regulatoryBody->isState(),
+                'reg_body_id' => $regulatoryBody->id
+            ]);
+
             // Apply regulatory body filter for state-level
             if ($regulatoryBody->isState()) {
-                $query->where('regulatory_body_id', $regulatoryBody->id);
+                $query->whereHas('organization', function ($q) use ($regulatoryBody) {
+                    $q->where('state_id', $regulatoryBody->state_id);
+                });
             }
 
             // Apply status filter
@@ -235,7 +247,13 @@ class RegulatoryBodyComplianceController extends Controller
                 });
             }
 
+            Log::info('Compliance Query SQL', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
+
+            DB::enableQueryLog();
             $requests = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            Log::info('Compliance Query SQL', DB::getQueryLog());
+
+            Log::info('Compliance Requests Count', ['count' => $requests->count(), 'total' => $requests->total()]);
 
             return response()->json([
                 'data' => $requests->items(),
@@ -267,7 +285,7 @@ class RegulatoryBodyComplianceController extends Controller
                 ->findOrFail($id);
 
             // Verify access for state-level regulators
-            if ($regulatoryBody->isState() && $complianceRequest->regulatory_body_id !== $regulatoryBody->id) {
+            if ($regulatoryBody->isState() && $complianceRequest->regulatory_body_id !== $regulatoryBody->id && $complianceRequest->regulatory_body_id !== null) {
                 return response()->json(['error' => 'Unauthorized access.'], 403);
             }
 
@@ -294,12 +312,12 @@ class RegulatoryBodyComplianceController extends Controller
             $complianceRequest = ComplianceRequest::with('organization')->findOrFail($id);
 
             // Verify access for state-level regulators
-            if ($regulatoryBody->isState() && $complianceRequest->regulatory_body_id !== $regulatoryBody->id) {
+            if ($regulatoryBody->isState() && $complianceRequest->regulatory_body_id !== $regulatoryBody->id && $complianceRequest->regulatory_body_id !== null) {
                 return response()->json(['error' => 'Unauthorized access.'], 403);
             }
 
             // Check if already processed
-            if ($complianceRequest->status !== 'pending') {
+            if ($complianceRequest->status !== 'Pending') {
                 return response()->json(['error' => 'This request has already been processed.'], 400);
             }
 
@@ -311,6 +329,9 @@ class RegulatoryBodyComplianceController extends Controller
             // Update organization to approved status if applicable
             if ($complianceRequest->organization) {
                 $complianceRequest->organization->update(['is_approved' => true]);
+
+                // Refresh the organization to ensure the updated value is loaded
+                $complianceRequest->organization->fresh();
 
                 // Send notification to organization's user
                 if ($complianceRequest->organization->user) {
@@ -344,12 +365,12 @@ class RegulatoryBodyComplianceController extends Controller
             $complianceRequest = ComplianceRequest::with('organization')->findOrFail($id);
 
             // Verify access for state-level regulators
-            if ($regulatoryBody->isState() && $complianceRequest->regulatory_body_id !== $regulatoryBody->id) {
+            if ($regulatoryBody->isState() && $complianceRequest->regulatory_body_id !== $regulatoryBody->id && $complianceRequest->regulatory_body_id !== null) {
                 return response()->json(['error' => 'Unauthorized access.'], 403);
             }
 
             // Check if already processed
-            if ($complianceRequest->status !== 'pending') {
+            if ($complianceRequest->status !== 'Pending') {
                 return response()->json(['error' => 'This request has already been processed.'], 400);
             }
 
