@@ -67,6 +67,32 @@ class OfferController extends Controller
     }
 
     /**
+     * Get all offers made by the authenticated blood bank.
+     */
+    public function getMyOffers(): JsonResponse
+    {
+        $user = Auth::user();
+        $orgId = $user->organization_id ?? $user->linkedOrganization?->id;
+
+        if (!$orgId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No organization found'
+            ], 400);
+        }
+
+        $offers = Offer::where('organization_id', $orgId)
+            ->with(['bloodRequest.organization', 'bloodRequest.delivery'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $offers
+        ]);
+    }
+
+    /**
      * Blood Bank submits an offer for a blood request.
      */
     public function store(Request $request, BloodRequest $bloodRequest): JsonResponse

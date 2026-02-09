@@ -41,6 +41,7 @@ class Organization extends Model implements Authenticatable
         'show_inventory',
         'show_contact',
         'status',
+        'state_id',
         'is_approved',
     ];
 
@@ -129,6 +130,11 @@ class Organization extends Model implements Authenticatable
     public function state(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(State::class);
+    }
+
+    public function complianceRequests(): HasMany
+    {
+        return $this->hasMany(ComplianceRequest::class);
     }
 
     /**

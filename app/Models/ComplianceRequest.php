@@ -63,7 +63,7 @@ class ComplianceRequest extends Model
      */
     public function isPending(): bool
     {
-        return $this->status === 'pending';
+        return $this->status === 'Pending';
     }
 
     /**
@@ -71,7 +71,7 @@ class ComplianceRequest extends Model
      */
     public function isApproved(): bool
     {
-        return $this->status === 'approved';
+        return $this->status === 'Approved';
     }
 
     /**
@@ -79,7 +79,7 @@ class ComplianceRequest extends Model
      */
     public function isRejected(): bool
     {
-        return $this->status === 'rejected';
+        return $this->status === 'Rejected';
     }
 
     /**
@@ -88,7 +88,7 @@ class ComplianceRequest extends Model
     public function approve(int $reviewedById, ?string $notes = null): void
     {
         $this->update([
-            'status' => 'approved',
+            'status' => 'Approved',
             'approved_at' => now(),
             'reviewed_by_id' => $reviewedById,
             'notes' => $notes,
@@ -101,7 +101,7 @@ class ComplianceRequest extends Model
     public function reject(int $reviewedById, string $rejectionReason, ?string $notes = null): void
     {
         $this->update([
-            'status' => 'rejected',
+            'status' => 'Rejected',
             'reviewed_by_id' => $reviewedById,
             'rejection_reason' => $rejectionReason,
             'notes' => $notes,

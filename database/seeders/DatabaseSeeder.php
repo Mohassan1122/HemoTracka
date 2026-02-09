@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             StateSeeder::class,
+            RiversStateSeeder::class,
             AdminSeeder::class,
             FacilitiesSeeder::class,
             BloodBankSeeder::class,

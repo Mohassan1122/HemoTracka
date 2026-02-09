@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->unsignedBigInteger('regulatory_body_id');
             $table->unsignedBigInteger('organization_id');
-            $table->enum('organization_type', ['blood_bank', 'health_facility']);
+            $table->enum('organization_type', ['blood_banks', 'facilities']);
             $table->string('request_type');
             $table->text('description')->nullable();
             $table->string('priority')->default('Medium');

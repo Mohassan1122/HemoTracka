@@ -108,6 +108,7 @@ class AuthController extends Controller
                     'address' => $org->address,
                     'license_number' => $org->license_number,
                     'status' => $org->status,
+                    'is_approved' => (boolean) $org->is_approved,
                     'logo_url' => $org->logo_url,
                     'cover_photo_url' => $org->cover_photo_url,
                     'latitude' => $org->latitude,
@@ -274,6 +275,7 @@ class AuthController extends Controller
             'type' => ['required', 'in:Hospital,Blood Bank'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'state_id' => ['required', 'exists:states,id'],
         ]);
 
         // Determine role based on type
@@ -308,22 +310,40 @@ class AuthController extends Controller
             'is_approved' => false, // New registrations require compliance approval
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
+            'state_id' => $validated['state_id'],
         ]);
 
         // Auto-create compliance request for regulatory body approval
         try {
-            \App\Models\ComplianceRequest::create([
-                'organization_id' => $organization->id,
-                'organization_type' => $validated['type'],
-                'request_type' => 'registration',
-                'description' => "New {$validated['type']} registration: {$validated['name']}",
-                'priority' => 'normal',
-                'status' => 'pending',
-                'submission_date' => now(),
-            ]);
+            \Log::info('Starting compliance request creation for organization.', ['org_id' => $organization->id]);
+
+            // Map to correct Enum values: 'blood_banks', 'facilities'
+            $orgType = 'facilities';
+            if ($validated['type'] === 'Blood Bank') {
+                $orgType = 'blood_banks';
+            } elseif ($validated['type'] === 'Hospital') {
+                $orgType = 'facilities';
+            }
+
+            \Log::info('Compliance request org_type determined.', ['org_type' => $orgType]);
+
+            $complianceRequest = new \App\Models\ComplianceRequest();
+            $complianceRequest->organization_id = $organization->id;
+            $complianceRequest->organization_type = $orgType;
+            $complianceRequest->request_type = 'registration';
+            $complianceRequest->description = "New {$validated['type']} registration: {$validated['name']}";
+            $complianceRequest->priority = 'Medium';
+            $complianceRequest->status = 'Pending';
+            $complianceRequest->submission_date = now();
+            $complianceRequest->save();
+
+            \Log::info('Compliance request created successfully.', ['compliance_id' => $complianceRequest->id]);
         } catch (\Exception $e) {
             // Log error but don't fail registration
-            \Log::warning('Failed to create compliance request for organization: ' . $organization->id, ['error' => $e->getMessage()]);
+            \Log::error('Failed to create compliance request for organization: ' . $organization->id, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
 
         // Create token from User (new auth pattern)
