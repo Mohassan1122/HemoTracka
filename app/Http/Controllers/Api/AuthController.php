@@ -210,6 +210,8 @@ class AuthController extends Controller
             'height' => ['nullable', 'string', 'max:10'],
             'address' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         // Handle profile picture upload if provided
@@ -230,6 +232,8 @@ class AuthController extends Controller
             'gender' => $validated['gender'] ?? null,
             'role' => $validated['role'] ?? 'donor',
             'profile_picture' => $validated['profile_picture'] ?? null,
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
         ]);
 
         // If the user is registering as a donor, also create a donor record
