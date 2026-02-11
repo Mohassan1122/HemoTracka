@@ -15,7 +15,7 @@ return [
     |
     */
 
-       'paths' => [
+    'paths' => [
         'api/*',
         'broadcasting/auth', // VERY IMPORTANT
         'sanctum/csrf-cookie'
@@ -23,8 +23,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-      'allowed_origins' => [
-        'http://api-hemotrackr.85.9.202.212.sslip.io',
+    'allowed_origins' => [
+        'http://admin-hemotrackr.167.235.58.232.sslip.io',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ],
