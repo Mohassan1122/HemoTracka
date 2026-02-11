@@ -15,17 +15,25 @@ return [
     |
     */
 
-    'paths' => ['*'],
+       'paths' => [
+        'api/*',
+        'broadcasting/auth', // VERY IMPORTANT
+        'sanctum/csrf-cookie'
+    ],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+      'allowed_origins' => [
+        'http://api-hemotrackr.85.9.202.212.sslip.io',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ],
 
     'allowed_origins_patterns' => ['*.sslip.io'],
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Authorization'],
 
     'max_age' => 0,
 
