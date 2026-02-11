@@ -29,6 +29,18 @@ class RegulatoryBodyAuthController extends Controller
             'address' => ['nullable', 'string'],
         ]);
 
+        $validator->after(function ($validator) use ($request) {
+            if ($request->level === 'federal') {
+                if (RegulatoryBody::where('level', 'federal')->exists()) {
+                    $validator->errors()->add('level', 'A Federal Regulatory Body already exists. Only one is allowed.');
+                }
+            } elseif ($request->level === 'state' && $request->state_id) {
+                if (RegulatoryBody::where('level', 'state')->where('state_id', $request->state_id)->exists()) {
+                    $validator->errors()->add('state_id', 'A Regulatory Body for this state already exists.');
+                }
+            }
+        });
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
