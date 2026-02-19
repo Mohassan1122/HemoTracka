@@ -35,6 +35,7 @@ class AuthController extends Controller
             'latitude' => $user->latitude,
             'longitude' => $user->longitude,
             'email_verified_at' => $user->email_verified_at,
+            'preferences' => $user->preferences ?? [],
         ];
 
         // Add organization data if user has one
@@ -192,6 +193,7 @@ class AuthController extends Controller
 
     private function registerUser(Request $request): JsonResponse
     {
+        \Log::info('Register User Request:', $request->all());
         $role = $request->input('role', 'donor');
 
         $validated = $request->validate([
@@ -212,7 +214,19 @@ class AuthController extends Controller
             'notes' => ['nullable', 'string'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'admin_secret' => ['nullable', 'string'], // Required if role is admin
         ]);
+
+        // Security Check for Admin Registration
+        if ($role === 'admin') {
+            $secret = env('ADMIN_REGISTRATION_SECRET');
+            if (!$secret || $request->input('admin_secret') !== $secret) {
+                return response()->json([
+                    'message' => 'Invalid admin registration secret.',
+                    'errors' => ['admin_secret' => ['The provided secret key is incorrect.']]
+                ], 403);
+            }
+        }
 
         // Handle profile picture upload if provided
         if ($request->hasFile('profile_picture')) {
@@ -480,6 +494,7 @@ class AuthController extends Controller
             'address' => ['sometimes', 'string', 'nullable'],
             'latitude' => ['sometimes', 'numeric', 'between:-90,90', 'nullable'],
             'longitude' => ['sometimes', 'numeric', 'between:-180,180', 'nullable'],
+            'preferences' => ['sometimes', 'array'],
         ];
 
         // Add profile picture validation if it's present in the request
@@ -521,7 +536,8 @@ class AuthController extends Controller
                 'profile_picture',
                 'address',
                 'latitude',
-                'longitude'
+                'longitude',
+                'preferences'
             ]);
         }, ARRAY_FILTER_USE_KEY));
 

@@ -47,6 +47,21 @@ class MessageController extends Controller
             'body' => ['required', 'string'],
         ]);
 
+        // Check Recipient Privacy Preferences
+        $recipient = \App\Models\User::find($validated['to_user_id']);
+        if ($recipient && isset($recipient->preferences['privacy'])) {
+            $messagingPref = $recipient->preferences['privacy']['messaging'] ?? 'everyone';
+
+            if ($messagingPref === 'verified') {
+                if (!$request->user()->hasVerifiedEmail()) {
+                    return response()->json([
+                        'message' => 'This user only accepts messages from verified accounts.',
+                        'error' => 'Sender not verified'
+                    ], 403);
+                }
+            }
+        }
+
         $message = Message::create([
             'from_user_id' => $request->user()->id,
             'to_user_id' => $validated['to_user_id'],

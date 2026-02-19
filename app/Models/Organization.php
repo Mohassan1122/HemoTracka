@@ -87,14 +87,9 @@ class Organization extends Model implements Authenticatable
         return $this->hasMany(User::class);
     }
 
-    public function donors(): HasMany
+    public function donations(): HasMany
     {
-        return $this->hasMany(Donor::class);
-    }
-
-    public function inventoryItems(): HasMany
-    {
-        return $this->hasMany(InventoryItem::class);
+        return $this->hasMany(Donation::class);
     }
 
     public function bloodRequests(): HasMany
@@ -102,10 +97,21 @@ class Organization extends Model implements Authenticatable
         return $this->hasMany(BloodRequest::class);
     }
 
-    public function donations(): HasMany
+    public function inventoryItems(): HasMany
     {
-        return $this->hasMany(Donation::class);
+        return $this->hasMany(InventoryItem::class);
     }
+
+    public function reviews()
+    {
+        return $this->morphMany(Feedback::class, 'target');
+    }
+
+    public function donors(): HasMany
+    {
+        return $this->hasMany(Donor::class);
+    }
+
 
     public function settings(): HasMany
     {

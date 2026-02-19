@@ -250,4 +250,43 @@ class DonorController extends Controller
             'profile_picture_url' => $user->profile_picture_url,
         ]);
     }
+    /**
+     * Get donor's medical record and stats.
+     */
+    public function medicalRecord(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $donor = $user->donor;
+
+        if (!$donor) {
+            return response()->json(['message' => 'Donor profile not found.'], 404);
+        }
+
+        // Calculate stats
+        $totalBloodUnits = $donor->donations()->sum('units');
+
+        // Mock data for unsupported types (future proofing)
+        $totalBoneMarrow = 0;
+        $totalPlatelets = 0;
+
+        return response()->json([
+            'personal_info' => [
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'other_names' => $donor->other_names,
+                'gender' => $user->gender,
+                'date_of_birth' => $user->date_of_birth ? $user->date_of_birth->format('F j, Y') : null,
+            ],
+            'health_info' => [
+                'blood_group' => $donor->blood_group,
+                'genotype' => $donor->genotype,
+            ],
+            'donation_stats' => [
+                'blood_units' => $totalBloodUnits,
+                'bone_marrow_units' => $totalBoneMarrow,
+                'platelets_units' => $totalPlatelets,
+                'last_donation_date' => $donor->last_donation_date ? $donor->last_donation_date->format('F j, Y') : 'Never',
+            ]
+        ]);
+    }
 }

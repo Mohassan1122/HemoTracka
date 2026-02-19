@@ -34,6 +34,20 @@ class NewMessageSent implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
+        // Check if recipient wants message notifications
+        // We need to fetch the recipient to check preferences
+        $recipient = User::find($this->message->to_user_id);
+
+        if ($recipient) {
+            $preferences = $recipient->preferences ?? [];
+            $notifications = $preferences['notifications'] ?? [];
+            $wantsMessages = $notifications['messages'] ?? true;
+
+            if (!$wantsMessages) {
+                return []; // Do not broadcast
+            }
+        }
+
         // Broadcast to the recipient's private channel
         return [
             new PrivateChannel('messages.' . $this->message->to_user_id),

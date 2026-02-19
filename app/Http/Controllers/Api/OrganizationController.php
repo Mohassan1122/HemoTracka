@@ -67,7 +67,27 @@ class OrganizationController extends Controller
     {
         try {
             // Load only relationships that exist
-            $organization->loadMissing(['inventoryItems']);
+            $organization->loadMissing(['inventoryItems', 'user']);
+
+            // Apply Privacy Filters
+            if ($organization->user && isset($organization->user->preferences['privacy'])) {
+                $privacy = $organization->user->preferences['privacy'];
+
+                // Hide Inventory
+                if (isset($privacy['showInventory']) && $privacy['showInventory'] === 'false') {
+                    $organization->unsetRelation('inventoryItems');
+                }
+
+                // Hide Contact Info
+                if (isset($privacy['showContact']) && $privacy['showContact'] === 'false') {
+                    $organization->makeHidden(['phone', 'email', 'contact_email', 'address']);
+                }
+
+                // Hide License
+                if (isset($privacy['showLicense']) && $privacy['showLicense'] === 'false') {
+                    $organization->makeHidden(['license_number']);
+                }
+            }
 
             return response()->json([
                 'organization' => $organization,
@@ -136,7 +156,8 @@ class OrganizationController extends Controller
     public function bloodBanks(Request $request): JsonResponse
     {
         $query = Organization::where('type', 'Blood Bank')
-            ->where('status', 'Active');
+            ->where('status', 'Active')
+            ->with('user'); // Load user for preferences
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -147,6 +168,18 @@ class OrganizationController extends Controller
         }
 
         $bloodBanks = $query->paginate($request->get('per_page', 15));
+
+        // Hide privacy fields for list
+        $bloodBanks->getCollection()->transform(function ($org) {
+            if ($org->user && isset($org->user->preferences['privacy'])) {
+                $privacy = $org->user->preferences['privacy'];
+
+                if (isset($privacy['showContact']) && $privacy['showContact'] === 'false') {
+                    $org->makeHidden(['phone', 'email', 'contact_email', 'address']);
+                }
+            }
+            return $org;
+        });
 
         return response()->json($bloodBanks);
     }
@@ -171,6 +204,7 @@ class OrganizationController extends Controller
             ->where('status', 'Active')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
+            ->with('user') // Load user for preferences
             ->selectRaw("
                 *,
                 (6371 * acos(
@@ -182,11 +216,19 @@ class OrganizationController extends Controller
             ->orderBy('distance')
             ->get()
             ->map(function ($org) {
+                $isHidden = false;
+                if ($org->user && isset($org->user->preferences['privacy'])) {
+                    $privacy = $org->user->preferences['privacy'];
+                    if (isset($privacy['showContact']) && $privacy['showContact'] === 'false') {
+                        $isHidden = true;
+                    }
+                }
+
                 return [
                     'id' => $org->id,
                     'name' => $org->name,
-                    'address' => $org->address,
-                    'phone' => $org->phone,
+                    'address' => $isHidden ? null : $org->address,
+                    'phone' => $isHidden ? null : $org->phone,
                     'latitude' => $org->latitude,
                     'longitude' => $org->longitude,
                     'distance_km' => round($org->distance, 2),

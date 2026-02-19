@@ -31,6 +31,30 @@ class NewBloodRequestNotification extends Notification implements ShouldQueue, S
      */
     public function via(object $notifiable): array
     {
+        // Default to true if preferences not set
+        $preferences = $notifiable->preferences ?? [];
+        $notifications = $preferences['notifications'] ?? [];
+
+        // Check "Blood Requests" preference
+        $wantsBloodRequests = $notifications['bloodRequests'] ?? true;
+
+        // precise mapping: if request source is 'blood_banks', check that specific toggle too?
+        // The toggle "Receive notifications from blood banks" exists.
+        // Let's assume if it comes from a blood bank, we check that AND generic blood requests.
+        // Or deeper logic:
+        // If request_source is 'blood_banks' -> check 'bloodBanks'
+        // If request_source is 'donors' -> check 'bloodRequests' (or just generic)
+        // But the current UI implies 'bloodRequests' is the main toggle for "Blood Requests".
+
+        // Let's stick to the main toggle for the Notification Type itself.
+        // "Receive notifications from blood banks" might be for DIRECT messages or alerts from banks.
+        // But let's check both if applicable.
+
+        if (!$wantsBloodRequests) {
+            // Keep database for history, but suppress intrusive channels
+            return ['database'];
+        }
+
         return ['mail', 'database', 'broadcast'];
     }
 

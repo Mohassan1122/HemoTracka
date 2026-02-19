@@ -401,6 +401,9 @@ class FacilitiesController extends Controller
                 'date_registered' => $organization->created_at->format('F j, Y'),
                 'logo_url' => $organization->logo_url,
                 'cover_photo_url' => $organization->cover_photo_url,
+                'receive_notifications' => (bool) $organization->receive_notifications,
+                'show_contact' => (bool) $organization->show_contact,
+                'show_inventory' => (bool) $organization->show_inventory,
                 'social_links' => [
                     'instagram' => $organization->instagram_link,
                     'twitter' => $organization->twitter_link,
@@ -442,10 +445,13 @@ class FacilitiesController extends Controller
             'operating_hours' => ['sometimes', 'array'],
             'description' => ['sometimes', 'string'],
             'services' => ['sometimes', 'array'],
-            'facebook_link' => ['sometimes', 'string', 'url'],
-            'twitter_link' => ['sometimes', 'string', 'url'],
-            'instagram_link' => ['sometimes', 'string', 'url'],
-            'linkedin_link' => ['sometimes', 'string', 'url'],
+            'facebook_link' => ['nullable', 'string', 'url'],
+            'twitter_link' => ['nullable', 'string', 'url'],
+            'instagram_link' => ['nullable', 'string', 'url'],
+            'linkedin_link' => ['nullable', 'string', 'url'],
+            'receive_notifications' => ['sometimes', 'boolean'],
+            'show_contact' => ['sometimes', 'boolean'],
+            'show_inventory' => ['sometimes', 'boolean'],
             'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
             'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
             'logo' => ['sometimes', 'image', 'max:2048'],
@@ -497,11 +503,15 @@ class FacilitiesController extends Controller
                 'twitter_link' => $organization->twitter_link,
                 'instagram_link' => $organization->instagram_link,
                 'linkedin_link' => $organization->linkedin_link,
+                'receive_notifications' => (bool) $organization->receive_notifications,
+                'show_contact' => (bool) $organization->show_contact,
+                'show_inventory' => (bool) $organization->show_inventory,
                 'latitude' => $organization->latitude,
                 'longitude' => $organization->longitude,
             ]
         ]);
     }
+
 
     /**
      * Export request history (CSV mockup).

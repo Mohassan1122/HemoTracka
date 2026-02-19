@@ -24,6 +24,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public const ROLE_BLOOD_BANKS = 'blood_banks';
     public const ROLE_REGULATORY_BODY = 'regulatory_body';
 
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(State::class);
+    }
+
     /**
      * The attributes that are mass assignable.
      *
@@ -43,6 +48,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'latitude',
         'longitude',
         'email_verified_at',
+        'preferences',
     ];
 
     /**
@@ -65,6 +71,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'date_of_birth' => 'date',
         'password' => 'hashed',
         'profile_picture' => 'string',
+        'preferences' => 'array',
     ];
 
     protected $appends = [

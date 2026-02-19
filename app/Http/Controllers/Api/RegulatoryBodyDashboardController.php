@@ -103,13 +103,10 @@ class RegulatoryBodyDashboardController extends Controller
     /**
      * Get inventory chart data (PAGE 3 - Inventory Chart).
      */
-    /**
-     * Get inventory chart data (PAGE 3 - Inventory Chart).
-     */
     public function getInventoryChart(Request $request): JsonResponse
     {
         try {
-            $period = $request->input('period', 'monthly'); // Only monthly supported for this chart for now
+            $period = $request->input('period', 'monthly');
             $bloodGroup = $request->input('blood_group', 'All');
 
             $query = InventoryItem::select(
@@ -122,8 +119,8 @@ class RegulatoryBodyDashboardController extends Controller
                 $query->where('blood_group', $bloodGroup);
             }
 
-            // Filter by period (default to last 12 months for this chart)
-            $query->where('updated_at', '>=', now()->subMonths(12));
+            // Apply Period Filter
+            $this->applyPeriodFilter($query, $period, 'updated_at');
 
             $chartData = $query->groupBy('month', 'month_num')
                 ->orderBy('month_num')
@@ -149,11 +146,16 @@ class RegulatoryBodyDashboardController extends Controller
         try {
             $period = $request->input('period', 'quarterly');
 
-            $donations = Donation::select(
+            // Format date based on period granularity? For now keep monthly grouping but filter range.
+            $query = Donation::select(
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
                 DB::raw('COUNT(*) as count')
-            )
-                ->groupBy('month')
+            );
+
+            // Apply Period Filter
+            $this->applyPeriodFilter($query, $period, 'created_at');
+
+            $donations = $query->groupBy('month')
                 ->orderBy('month')
                 ->get();
 
@@ -239,24 +241,25 @@ class RegulatoryBodyDashboardController extends Controller
     {
         try {
             $period = $request->input('period', 'monthly');
-            // Assuming monthly for now
 
-            $donations = Donation::select(
+            // Donations Query
+            $donationsQuery = Donation::select(
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
                 DB::raw('COUNT(*) as count')
-            )
-                ->where('created_at', '>=', now()->subYear())
-                ->groupBy('month')
+            );
+            $this->applyPeriodFilter($donationsQuery, $period, 'created_at');
+            $donations = $donationsQuery->groupBy('month')
                 ->orderBy('month')
                 ->get()
                 ->pluck('count', 'month');
 
-            $requests = BloodRequest::select(
+            // Blood Requests Query
+            $requestsQuery = BloodRequest::select(
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
                 DB::raw('COUNT(*) as count')
-            )
-                ->where('created_at', '>=', now()->subYear())
-                ->groupBy('month')
+            );
+            $this->applyPeriodFilter($requestsQuery, $period, 'created_at');
+            $requests = $requestsQuery->groupBy('month')
                 ->orderBy('month')
                 ->get()
                 ->pluck('count', 'month');

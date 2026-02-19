@@ -33,6 +33,18 @@ class AppointmentNotification extends Notification implements ShouldQueue, Shoul
      */
     public function via($notifiable): array
     {
+        // Default to true if preferences not set
+        $preferences = $notifiable->preferences ?? [];
+        $notifications = $preferences['notifications'] ?? [];
+
+        // Check "Scheduled Donations" preference
+        $wantsScheduled = $notifications['scheduledDonations'] ?? true;
+
+        if (!$wantsScheduled) {
+            // Keep database for history, but suppress intrusive channels
+            return ['database'];
+        }
+
         return ['database', 'mail', 'broadcast'];
     }
 

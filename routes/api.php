@@ -72,6 +72,18 @@ Route::get('/deliveries/track/{trackingCode}', [DeliveryController::class, 'trac
 Route::middleware('auth:sanctum')->group(function () {
 
     // =========================================================================
+    // GLOBAL NOTIFICATIONS
+    // =========================================================================
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread', [NotificationController::class, 'unread']);
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::patch('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    });
+
+    // =========================================================================
     // 0. REGULATORY BODY ROUTES (/regulatory-body)
     // =========================================================================
     Route::prefix('regulatory-body')->group(function () {
@@ -167,6 +179,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Settings & Notifications (PAGE 9)
         Route::get('/notification-preferences', [RegulatoryBodySettingsController::class, 'getNotificationPreferences']);
         Route::put('/notification-preferences', [RegulatoryBodySettingsController::class, 'updateNotificationPreferences']);
+        Route::get('/privacy-settings', [RegulatoryBodySettingsController::class, 'getPrivacySettings']);
+        Route::put('/privacy-settings', [RegulatoryBodySettingsController::class, 'updatePrivacySettings']);
 
         // Logout
         Route::post('/logout', [RegulatoryBodyAuthController::class, 'logout']);
@@ -247,6 +261,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DonorController::class, 'dashboard']);
         Route::get('/eligibility', [DonorController::class, 'eligibility']);
         Route::get('/donations', [DonorController::class, 'donations']);
+        Route::get('/medical-record', [DonorController::class, 'medicalRecord']);
         Route::get('/donations/history', [DonationController::class, 'donorHistory']);
         Route::get('/badges', [DonorBadgeController::class, 'donorBadges']);
         Route::post('/check-badges', [DonorBadgeController::class, 'checkAndAward']);
@@ -421,13 +436,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
 
         // Organization Management
+        Route::get('/organization-stats', [AdminController::class, 'organizationStats']);
         Route::get('/organizations', [AdminController::class, 'organizations']);
+        Route::get('/organizations/{id}', [AdminController::class, 'organizationDetails']);
         Route::put('/organizations/{id}/status', [AdminController::class, 'updateOrganizationStatus']);
-        Route::apiResource('organizations', OrganizationController::class)->except(['index']); // Keep CRUD, but prefix is /admin/organizations
+        // Route::apiResource('organizations', OrganizationController::class)->except(['index']); // Keep CRUD, but prefix is /admin/organizations
 
         // User & Donor Management
         Route::get('/users', [AdminController::class, 'users']);
-        Route::get('/donors', [AdminController::class, 'donors']); // I'll add this to controller
+        Route::get('/roles', [AdminController::class, 'roles']);
+        Route::get('/donors-list', [AdminController::class, 'donors']);
         Route::apiResource('donors', DonorController::class)->except(['index']);
 
         // Logistics & Riders
@@ -436,6 +454,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Feedbacks & Support
         Route::get('/feedback', [AdminController::class, 'feedback']);
+
+        // Messages & Alerts
+        Route::get('/messages', [AdminController::class, 'getConversations']);
+        Route::get('/messages/{conversationId}', [AdminController::class, 'getConversation']);
+        Route::post('/messages', [AdminController::class, 'sendMessage']);
+        Route::post('/messages/create-alert', [AdminController::class, 'createAlert']);
 
         // Stats & Reports (Legacy/Detailed)
         Route::get('/stats/donations-by-blood-group', [StatsController::class, 'donationsByBloodGroup']);
@@ -450,4 +474,3 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('deliveries', DeliveryController::class);
     });
 });
-

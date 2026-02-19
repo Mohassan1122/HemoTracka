@@ -82,6 +82,73 @@ class RegulatoryBodySettingsController extends Controller
     }
 
     /**
+     * Get privacy settings (PAGE 9 - Privacy & Security).
+     */
+    public function getPrivacySettings(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            // Default privacy settings
+            $defaultPrivacy = [
+                'showInventory' => 'true', // stored as strings in other controllers, keeping consistent
+                'showContact' => 'true',
+                'showLicense' => 'true',
+                'messaging' => 'everyone' // 'everyone' or 'verified'
+            ];
+
+            $preferences = $user->preferences['privacy'] ?? $defaultPrivacy;
+
+            // Merge with defaults to ensure all keys exist
+            $preferences = array_merge($defaultPrivacy, $preferences);
+
+            return response()->json(['privacy' => $preferences], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Update privacy settings (PAGE 9 - Privacy & Security).
+     */
+    public function updatePrivacySettings(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'showInventory' => ['required', 'in:true,false'],
+            'showContact' => ['required', 'in:true,false'],
+            'showLicense' => ['required', 'in:true,false'],
+            'messaging' => ['required', 'in:everyone,verified'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $user = $request->user();
+            $currentPreferences = $user->preferences ?? [];
+
+            $privacySettings = [
+                'showInventory' => $request->showInventory,
+                'showContact' => $request->showContact,
+                'showLicense' => $request->showLicense,
+                'messaging' => $request->messaging,
+            ];
+
+            $currentPreferences['privacy'] = $privacySettings;
+
+            $user->preferences = $currentPreferences;
+            $user->save();
+
+            return response()->json([
+                'message' => 'Privacy settings updated successfully.',
+                'privacy' => $privacySettings,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Get default notification preferences.
      */
     private function getDefaultPreferences(): array
