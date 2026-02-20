@@ -390,7 +390,7 @@ class AdminController extends Controller
      */
     public function organizationDetails($id): JsonResponse
     {
-        $org = Organization::with(['state', 'donations', 'bloodRequests.user', 'inventoryItems'])
+        $org = Organization::with(['state', 'donations', 'bloodRequests', 'inventoryItems'])
             ->withCount(['donations', 'bloodRequests', 'reviews'])
             ->findOrFail($id);
 
