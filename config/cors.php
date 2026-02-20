@@ -26,6 +26,7 @@ return [
     'allowed_origins' => [
         'http://api-hemotrackr.85.9.202.212.sslip.io',
         'http://admin-hemotrackr.167.235.58.232.sslip.io',
+        'https://api.hemotracka.com/api',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://localhost:5174',
